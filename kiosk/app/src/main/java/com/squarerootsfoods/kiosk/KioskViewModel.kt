@@ -211,6 +211,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openCart() {
+        if (pauseHotCheckout()) return
         if (_cart.value.isEmpty()) return
         _screen.value = Screen.Cart
         viewModelScope.launch {
@@ -520,7 +521,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
                 if (_screen.value != Screen.Done) return
                 _doneSeconds.value = 9 - it
             }
-            if (_screen.value == Screen.Done) _screen.value = Screen.Attract
+            if (_screen.value == Screen.Done) toAttract()
         }
     }
 
@@ -538,7 +539,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun finishVend() {
-        _screen.value = if (installReturn) Screen.Install else Screen.Attract
+        _screen.value = if (installReturn) Screen.Install else if (temperatureLocked) Screen.TempPause else Screen.Attract
         installReturn = false
         reloadGoods()
     }

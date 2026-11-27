@@ -185,25 +185,19 @@ fun AttractScreen(model: KioskViewModel) {
     }
 }
 
-private val catalogSlides = listOf(
-    R.drawable.hero_slide_01,
-    R.drawable.hero_slide_02,
-    R.drawable.hero_slide_03,
-    R.drawable.hero_slide_04,
-    R.drawable.hero_slide_05,
-    R.drawable.hero_slide_06,
-    R.drawable.hero_slide_07,
-    R.drawable.hero_slide_08,
-    R.drawable.hero_slide_09,
-    R.drawable.hero_slide_10,
-    R.drawable.hero_slide_11,
-    R.drawable.hero_slide_12,
-)
-
 @Composable
 private fun CatalogHero() {
-    var index by remember { mutableStateOf(0) }
-    LaunchedEffect(Unit) {
+    val context = LocalContext.current
+    val catalogSlides = remember(context) {
+        // Cabinet builds may include additional catalog artwork.
+        (1..12).mapNotNull { slide ->
+            val name = "hero_slide_" + slide.toString().padStart(2, '0')
+            context.resources.getIdentifier(name, "drawable", context.packageName).takeIf { it != 0 }
+        }.ifEmpty { listOf(R.drawable.hero_attract) }
+    }
+    var index by remember(catalogSlides) { mutableStateOf(0) }
+    LaunchedEffect(catalogSlides) {
+        if (catalogSlides.size == 1) return@LaunchedEffect
         while (true) {
             delay(4_000)
             index = (index + 1) % catalogSlides.size
