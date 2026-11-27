@@ -47,6 +47,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +75,7 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -468,15 +470,37 @@ fun PayScreen(model: KioskViewModel, pay: PayUi, totalLabel: String) {
                 }
             }
             if (pay.mode == "cash") {
+                var operatorEmail by remember { mutableStateOf("") }
+                var operatorPassword by remember { mutableStateOf("") }
                 Column(Modifier.weight(1f).fillMaxWidth().clip(Lg).background(Surface).border(1.dp, CardEdge, Lg).padding(28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Take the cash", color = Cream, fontSize = 24.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily)
-                    Text("Count the notes against the amount due, then confirm. The spiral turns after that. This cabinet has no bill reader yet.", color = Blue200, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily)
+                    Text("Operator confirmation required", color = Cream, fontSize = 24.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily)
+                    Text("Hand the cash to an operator. The operator signs in after counting it.", color = Blue200, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily)
                     pay.error?.let { Text(it, color = Pressed, fontSize = 15.sp) }
+                    OutlinedTextField(
+                        value = operatorEmail,
+                        onValueChange = { operatorEmail = it },
+                        label = { Text("Operator email") },
+                        singleLine = true,
+                        enabled = !pay.waiting,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = operatorPassword,
+                        onValueChange = { operatorPassword = it },
+                        label = { Text("Operator password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        enabled = !pay.waiting,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Spacer(Modifier.weight(1f))
                     PrimaryButton(
-                        "Cash is in the machine",
-                        onClick = { model.confirmCash() },
-                        enabled = !pay.waiting,
+                        "Confirm cash received",
+                        onClick = {
+                            model.confirmCash(operatorEmail.trim(), operatorPassword)
+                            operatorPassword = ""
+                        },
+                        enabled = !pay.waiting && operatorEmail.isNotBlank() && operatorPassword.isNotBlank(),
                         modifier = Modifier.fillMaxWidth().height(64.dp),
                         fontSize = 18.sp,
                     )

@@ -7,6 +7,8 @@ defmodule Vader.Settings do
   Temperature and humidity stay off until the desk turns them on.
   """
 
+  import Ecto.Query
+
   alias Vader.Repo
   alias Vader.Settings.Cabinet
 
@@ -21,70 +23,68 @@ defmodule Vader.Settings do
   def humidity_enabled?, do: saved(:humidity_enabled) == true
 
   def status do
-    cabinet = Repo.one(Cabinet)
+    cabinet = Repo.get!(Cabinet, 1)
 
     %{
-      cash_enabled: cash_enabled?(),
+      cash_enabled: if(is_nil(cabinet.cash_enabled), do: env_cash?(), else: cabinet.cash_enabled),
       source: source(cabinet, :cash_enabled, "environment"),
-      temperature_enabled: temperature_enabled?(),
+      temperature_enabled: cabinet.temperature_enabled == true,
       temperature_source: source(cabinet, :temperature_enabled, "default"),
-      humidity_enabled: humidity_enabled?(),
+      humidity_enabled: cabinet.humidity_enabled == true,
       humidity_source: source(cabinet, :humidity_enabled, "default"),
       temperature_c: reading(cabinet, :temperature_c, :temperature_enabled),
       humidity_percent: reading(cabinet, :humidity_percent, :humidity_enabled),
-      climate_read_at: cabinet && cabinet.climate_read_at
+      climate_read_at: cabinet.climate_read_at
     }
   end
 
   def cash_status, do: Map.take(status(), [:cash_enabled, :source])
 
   def put(attrs) when is_map(attrs) do
-    cabinet = Repo.one(Cabinet) || %Cabinet{}
-
     changes =
       attrs
       |> clear_reading(:temperature_enabled, :temperature_c)
       |> clear_reading(:humidity_enabled, :humidity_percent)
 
-    cabinet
-    |> Cabinet.changeset(changes)
-    |> Repo.insert_or_update()
+    update_cabinet(fn cabinet ->
+      cabinet |> Cabinet.changeset(changes) |> Repo.update()
+    end)
   end
 
   def put_cash(enabled) when is_boolean(enabled), do: put(%{cash_enabled: enabled})
 
   def record_climate(params) when is_map(params) do
-    cabinet = Repo.one(Cabinet) || %Cabinet{}
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    update_cabinet(fn cabinet ->
+      changes =
+        %{}
+        |> maybe_reading(cabinet, params, "temperature_c", :temperature_enabled, :temperature_c)
+        |> maybe_reading(cabinet, params, "humidity_percent", :humidity_enabled, :humidity_percent)
 
-    changes =
-      %{}
-      |> maybe_reading(cabinet, params, "temperature_c", :temperature_enabled, :temperature_c)
-      |> maybe_reading(cabinet, params, "humidity_percent", :humidity_enabled, :humidity_percent)
-
-    if changes == %{} do
-      {:ok, cabinet}
-    else
-      cabinet
-      |> Cabinet.changeset(Map.put(changes, :climate_read_at, now))
-      |> Repo.insert_or_update()
-    end
+      if changes == %{} do
+        {:ok, cabinet}
+      else
+        now = DateTime.utc_now() |> DateTime.truncate(:second)
+        cabinet |> Cabinet.changeset(Map.put(changes, :climate_read_at, now)) |> Repo.update()
+      end
+    end)
   end
 
-  defp saved(field) do
-    case Repo.one(Cabinet) do
-      %Cabinet{} = cabinet -> Map.get(cabinet, field)
-      _ -> nil
-    end
+  defp update_cabinet(fun) do
+    Repo.transaction(fn ->
+      cabinet = Repo.one!(from c in Cabinet, where: c.id == 1, lock: "FOR UPDATE")
+
+      case fun.(cabinet) do
+        {:ok, updated} -> updated
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
   end
 
-  defp source(nil, _field, fallback), do: fallback
+  defp saved(field), do: Cabinet |> Repo.get!(1) |> Map.fetch!(field)
 
   defp source(cabinet, field, fallback) do
     if is_boolean(Map.get(cabinet, field)), do: "desk", else: fallback
   end
-
-  defp reading(nil, _value, _switch), do: nil
 
   defp reading(cabinet, value, switch) do
     if Map.get(cabinet, switch) == true, do: Map.get(cabinet, value), else: nil

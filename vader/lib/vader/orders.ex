@@ -63,6 +63,15 @@ defmodule Vader.Orders do
     update_order(order, %{status: "success"})
   end
 
+  def refund_cash(%Order{id: id, payment_method: "cash"}) do
+    query = from o in Order, where: o.id == ^id and o.status == "success"
+
+    case Repo.update_all(query, set: [status: "refunded", updated_at: DateTime.utc_now() |> DateTime.truncate(:second)]) do
+      {1, _} -> {:ok, %{message: "Cash refund recorded."}}
+      {0, _} -> {:error, 409, "Only a paid order can be refunded"}
+    end
+  end
+
   def take_cash(params) when is_map(params) do
     reference = text(params["reference"])
     amount = int(params["amount_minor"])
@@ -76,11 +85,14 @@ defmodule Vader.Orders do
       true ->
         case get_by_reference(reference) ||
                create_paid_cash(reference, amount, currency, machine, params["items"] || []) do
-          %Order{} = order ->
+          %Order{payment_method: "cash", status: "success"} = order ->
             {:ok, %{reference: order.reference, amount_minor: order.amount_minor, currency: order.currency, status: order.status}}
 
           {:ok, %Order{} = order} ->
             {:ok, %{reference: order.reference, amount_minor: order.amount_minor, currency: order.currency, status: order.status}}
+
+          %Order{} ->
+            {:error, 409, "This reference cannot be used for a cash sale"}
 
           {:error, _changeset} ->
             {:error, 422, "Could not record the cash sale"}
@@ -93,6 +105,7 @@ defmodule Vader.Orders do
       machine_id: machine && machine.id,
       reference: reference,
       email: "cash@machine",
+      payment_method: "cash",
       amount_minor: amount,
       currency: currency,
       status: "success",
@@ -130,6 +143,7 @@ defmodule Vader.Orders do
       amount_minor: order.amount_minor,
       currency: order.currency,
       status: order.status,
+      payment_method: order.payment_method,
       demo: order.demo,
       machine_no: machine_no(order),
       items: order.items,

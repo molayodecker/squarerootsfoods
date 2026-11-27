@@ -15,7 +15,7 @@ defmodule VaderWeb.Admin.OrderController do
         conn |> put_status(:not_found) |> json(%{message: "Unknown payment"})
 
       %{status: "success"} = order ->
-        case Paystack.refund(order.reference, order.amount_minor, "operator") do
+        case refund_order(order) do
           {:ok, body} ->
             json(conn, %{
               data: Orders.json(Orders.get_by_reference(reference)),
@@ -30,4 +30,6 @@ defmodule VaderWeb.Admin.OrderController do
         conn |> put_status(:conflict) |> json(%{message: "Only a paid order can be refunded"})
     end
   end
+  defp refund_order(%{payment_method: "cash"} = order), do: Orders.refund_cash(order)
+  defp refund_order(order), do: Paystack.refund(order.reference, order.amount_minor, "operator")
 end

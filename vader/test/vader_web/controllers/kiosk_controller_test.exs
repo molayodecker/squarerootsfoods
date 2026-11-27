@@ -1,5 +1,5 @@
 defmodule VaderWeb.KioskControllerTest do
-  use VaderWeb.ConnCase, async: true
+  use VaderWeb.ConnCase, async: false
 
   alias Vader.{Accounts, Machines, Orders}
 
@@ -30,16 +30,40 @@ defmodule VaderWeb.KioskControllerTest do
       "items" => []
     }
 
-    conn = post(conn, "/api/app/payments/cash", params)
+    conn = post(sign_in(conn), "/api/app/payments/cash", params)
     assert json_response(conn, 404)["message"] == "Cash is not enabled"
 
     Application.put_env(:vader, :cash_enabled, true)
     on_exit(fn -> Application.put_env(:vader, :cash_enabled, false) end)
 
-    conn = post(build_conn(), "/api/app/payments/cash", params)
+    assert json_response(post(build_conn(), "/api/app/payments/cash", params), 401)
+    assert Orders.get_by_reference("VM-TEST-CASH") == nil
+
+    conn = post(sign_in(build_conn()), "/api/app/payments/cash", params)
     assert %{"status" => "success", "reference" => "VM-TEST-CASH", "amount_minor" => 20_000} = json_response(conn, 200)
 
-    assert Orders.get_by_reference("VM-TEST-CASH").status == "success"
+    assert Orders.get_by_reference("VM-TEST-CASH").payment_method == "cash"
+    assert [%{total_minor: 20_000}] = Orders.sales_totals()
+
+    refund = post(sign_in(build_conn()), "/admin/api/orders/VM-TEST-CASH/refund")
+    assert %{"data" => %{"status" => "refunded"}} = json_response(refund, 200)
+    assert Orders.sales_totals() == []
+
+    again = post(sign_in(build_conn()), "/admin/api/orders/VM-TEST-CASH/refund")
+    assert json_response(again, 409)
+  end
+
+  test "the database rejects a second cabinet settings row" do
+    alias Vader.Settings.Cabinet
+
+    assert Vader.Repo.aggregate(Cabinet, :count) == 1
+
+    duplicate =
+      Ecto.Changeset.change(%Cabinet{id: 2})
+      |> Ecto.Changeset.check_constraint(:id, name: :cabinet_settings_singleton)
+
+    assert {:error, changeset} = Vader.Repo.insert(duplicate, mode: :savepoint)
+    assert changeset.errors[:id]
   end
 
   test "the desk cash switch overrides the environment", %{conn: conn, machine: machine} do
@@ -55,7 +79,7 @@ defmodule VaderWeb.KioskControllerTest do
     assert %{"cash_enabled" => false, "source" => "desk"} = json_response(conn, 200)["data"]
 
     closed =
-      post(build_conn(), "/api/app/payments/cash", %{
+      post(sign_in(build_conn()), "/api/app/payments/cash", %{
         "reference" => "VM-TEST-CASH-DESK-OFF",
         "amount_minor" => 20_000,
         "currency" => "NGN",

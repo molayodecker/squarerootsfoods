@@ -35,6 +35,9 @@ defmodule Vader.Paystack do
       nil ->
         {:error, 404, "Unknown payment"}
 
+      %Order{payment_method: "cash"} ->
+        {:error, 404, "Unknown payment"}
+
       %Order{demo: true} = order ->
         {:ok, %{status: order.status, demo: true, reference: reference, message: demo_message(order)}}
 
@@ -61,6 +64,9 @@ defmodule Vader.Paystack do
 
   def refund(reference, amount, reason) do
     case Orders.get_by_reference(reference) do
+      %Order{payment_method: "cash"} ->
+        {:error, 409, "Record cash refunds through the operator desk"}
+
       %Order{demo: true} = order ->
         Orders.update_order(order, %{status: "refunded"})
         {:ok, %{demo: true, message: "Demo refund recorded. No card was charged."}}
@@ -75,8 +81,8 @@ defmodule Vader.Paystack do
 
   def apply_webhook(%{"event" => "charge.success", "data" => %{"reference" => reference}}) do
     case Orders.get_by_reference(reference) do
-      nil -> :ok
-      order -> Orders.mark_paid(order)
+      %Order{payment_method: "paystack"} = order -> Orders.mark_paid(order)
+      _ -> :ok
     end
 
     :ok
@@ -86,6 +92,9 @@ defmodule Vader.Paystack do
 
   defp open_checkout(reference, amount, currency, email, machine, items) do
     case Orders.get_by_reference(reference) do
+      %Order{payment_method: "cash"} ->
+        {:error, 409, "This reference cannot be used for Paystack"}
+
       %Order{} = existing ->
         {:ok, session(existing)}
 

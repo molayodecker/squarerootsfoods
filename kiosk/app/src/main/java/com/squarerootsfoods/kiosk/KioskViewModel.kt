@@ -103,6 +103,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     private val installStore = InstallStore(app)
     private val api = MachineApi(prefs)
     private val driver = VendDriver()
+    private var temperatureLocked = false
     private val climateSensor = CabinetClimate(app)
     private var payJob: Job? = null
     private var installReturn = false
@@ -222,12 +223,13 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openDetail(productId: String) {
-        _screen.value = Screen.Detail(productId)
+        if (!pauseHotCheckout()) _screen.value = Screen.Detail(productId)
     }
 
     fun toAttract() {
+        if (_pay.value.mode == "cash" && _pay.value.waiting) return
         _soldOut.value = null
-        _screen.value = Screen.Attract
+        if (!pauseHotCheckout()) _screen.value = Screen.Attract
     }
 
     fun dismissSoldOut() {
@@ -278,6 +280,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun startPay(email: String) {
+        if (pauseHotCheckout()) return
         val lines = _cart.value
         if (lines.isEmpty()) return
         val amount = lines.sumOf { it.totalMinor }
@@ -333,15 +336,20 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun startCash() {
+        if (pauseHotCheckout()) return
         if (_cart.value.isEmpty() || !_cashEnabled.value) return
         payJob?.cancel()
         _screen.value = Screen.Pay
         _pay.value = PayUi(mode = "cash", waiting = false, error = null, failReason = "")
     }
 
-    fun confirmCash() {
+    fun confirmCash(email: String, password: String) {
+        if (pauseHotCheckout()) return
         val lines = _cart.value
-        if (lines.isEmpty() || !_cashEnabled.value || _pay.value.waiting) return
+        if (_screen.value != Screen.Pay || _pay.value.mode != "cash" ||
+            lines.isEmpty() || !_cashEnabled.value || _pay.value.waiting ||
+            email.isBlank() || password.isBlank()
+        ) return
         val amount = lines.sumOf { it.totalMinor }
         val reference = "${prefs.machineNo}-${System.currentTimeMillis()}"
         _pay.value = _pay.value.copy(mode = "cash", waiting = true, error = null)
@@ -353,6 +361,8 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
                     amountMinor = amount,
                     currency = lines.first().product.currency.ifBlank { prefs.currency },
                     lines = lines,
+                    operatorEmail = email,
+                    operatorPassword = password,
                 )
                 _pay.value = PayUi(session = session, mode = "cash", waiting = false)
                 dispense(session)
@@ -391,6 +401,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sendPhonePrompt() {
+        if (pauseHotCheckout()) return
         if (_pay.value.phone.length < 10) return
         _screen.value = Screen.Approve
         _pay.value = _pay.value.copy(waiting = true, expiresSec = 120, error = null)
@@ -533,8 +544,9 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelPay() {
+        if (_pay.value.mode == "cash" && _pay.value.waiting) return
         payJob?.cancel()
-        _screen.value = if (installReturn) Screen.Install else Screen.Cart
+        _screen.value = if (installReturn) Screen.Install else if (temperatureLocked) Screen.TempPause else Screen.Cart
         installReturn = false
     }
 
@@ -543,7 +555,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
             Screen.Home -> _screen.value = Screen.Attract
             is Screen.Detail, Screen.Cart -> _screen.value = Screen.Home
             Screen.Pay, Screen.Approve, Screen.PayFail -> cancelPay()
-            Screen.Pin, Screen.Service, Screen.Settings, Screen.TempPause -> _screen.value = Screen.Attract
+            Screen.Pin, Screen.Service, Screen.Settings, Screen.TempPause -> toAttract()
             Screen.Install -> closeInstall()
             Screen.Done, Screen.Refund -> finishVend()
             else -> Unit
@@ -552,7 +564,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun goHome() {
-        _screen.value = Screen.Home
+        if (!pauseHotCheckout()) _screen.value = Screen.Home
     }
 
     fun checkForUpdate() {
@@ -806,6 +818,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
                     continue
                 }
                 if (!flags.temperature && !flags.humidity) {
+                    temperatureLocked = false
                     _climate.value = ClimateUi()
                     if (_screen.value == Screen.TempPause) _screen.value = Screen.Attract
                     delay(15_000)
@@ -822,20 +835,26 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
                     humidityPercent = humidity,
                     readAtMillis = readAt,
                 )
+                temperatureLocked = flags.temperature && (temperature?.let { it > 8f } ?: temperatureLocked)
+                when {
+                    temperatureLocked && !keepsWorking(_screen.value) -> _screen.value = Screen.TempPause
+                    !temperatureLocked && _screen.value == Screen.TempPause -> _screen.value = Screen.Attract
+                }
                 if (temperature != null || humidity != null) {
                     try {
                         api.reportClimate(temperature, humidity)
                     } catch (_: Exception) {
                     }
                 }
-                val hot = flags.temperature && temperature != null && temperature > 8f
-                when {
-                    hot && !keepsWorking(_screen.value) -> _screen.value = Screen.TempPause
-                    !hot && _screen.value == Screen.TempPause -> _screen.value = Screen.Attract
-                }
                 delay(15_000)
             }
         }
+    }
+
+    private fun pauseHotCheckout(): Boolean {
+        if (!temperatureLocked) return false
+        _screen.value = Screen.TempPause
+        return true
     }
 
     private fun keepsWorking(screen: Screen) = when (screen) {

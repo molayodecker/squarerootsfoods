@@ -106,14 +106,24 @@ class MachineApi(private val prefs: MachinePrefs) {
         amountMinor: Long,
         currency: String,
         lines: List<CartLine>,
+        operatorEmail: String,
+        operatorPassword: String,
     ): PaySession = withContext(Dispatchers.IO) {
+        check(prefs.serverBase.startsWith("https://", ignoreCase = true)) {
+            "Cash confirmation requires an HTTPS server."
+        }
+        val token = post(
+            "/admin/api/session",
+            JSONObject().put("email", operatorEmail).put("password", operatorPassword),
+        ).getString("token")
         val payload = JSONObject()
             .put("reference", reference)
             .put("amount_minor", amountMinor)
             .put("currency", currency)
             .put("machine_no", prefs.machineNo)
             .put("items", itemArray(lines))
-        val body = post("/api/app/payments/cash", payload)
+        val body = post("/api/app/payments/cash", payload, token)
+        check(body.optString("status") == "success") { "Cash order is not payable." }
         PaySession(
             reference = body.getString("reference"),
             authorizationUrl = "",
@@ -209,10 +219,11 @@ class MachineApi(private val prefs: MachinePrefs) {
         }
     }
 
-    private fun post(path: String, payload: JSONObject): JSONObject {
+    private fun post(path: String, payload: JSONObject, token: String? = null): JSONObject {
         val request = Request.Builder()
             .url(prefs.serverBase + path)
             .post(payload.toString().toRequestBody(jsonType))
+            .apply { if (token != null) header("Authorization", "Bearer $token") }
             .build()
         client.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()

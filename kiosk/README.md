@@ -53,3 +53,6 @@ adb shell dpm set-device-owner com.squarerootsfoods.kiosk/.admin.KioskDeviceAdmi
 ```
 
 Otherwise Android shows the normal install confirmation. The package id is `com.squarerootsfoods.kiosk`, so it does not replace the signed 3.1.80 app or an earlier `en.openvem.kiosk` install. Uninstall those, then pick this one as the home app.
+
+
+Cash confirmation requires the operator’s desk account and an HTTPS API URL.

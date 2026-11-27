@@ -8,6 +8,7 @@ defmodule Vader.Orders.Order do
     field :amount_minor, :integer
     field :currency, :string
     field :status, :string, default: "pending"
+    field :payment_method, :string, default: "paystack"
     field :demo, :boolean, default: false
     field :items, {:array, :map}, default: []
     belongs_to :machine, Vader.Machines.Machine
@@ -17,7 +18,7 @@ defmodule Vader.Orders.Order do
 
   def changeset(order, attrs) do
     order
-    |> cast(attrs, [:machine_id, :reference, :email, :amount_minor, :currency, :status, :demo, :items])
+    |> cast(attrs, [:machine_id, :reference, :email, :amount_minor, :currency, :status, :payment_method, :demo, :items])
     |> validate_required([:reference, :email, :amount_minor, :currency, :status])
     |> unique_constraint(:reference)
   end
