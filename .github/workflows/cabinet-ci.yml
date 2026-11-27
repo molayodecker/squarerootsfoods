@@ -54,5 +54,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - name: Install Android SDK
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDK_MANAGER="$(find "$SDK_ROOT/cmdline-tools" -path '*/bin/sdkmanager' -type f | sort -V | tail -n 1)"
+          test -n "$SDK_MANAGER"
+          yes | "$SDK_MANAGER" --licenses >/dev/null || true
+          "$SDK_MANAGER" "platforms;android-34" "build-tools;34.0.0"
       - run: bash gradlew :app:testDebugUnitTest :app:assembleDebug

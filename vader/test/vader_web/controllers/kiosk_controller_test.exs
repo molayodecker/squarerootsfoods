@@ -93,7 +93,7 @@ defmodule VaderWeb.KioskControllerTest do
     assert %{"cash_enabled" => true, "source" => "desk"} = json_response(conn, 200)["data"]
 
     opened =
-      post(build_conn(), "/api/app/payments/cash", %{
+      post(sign_in(build_conn()), "/api/app/payments/cash", %{
         "reference" => "VM-TEST-CASH-DESK-ON",
         "amount_minor" => 20_000,
         "currency" => "NGN",
