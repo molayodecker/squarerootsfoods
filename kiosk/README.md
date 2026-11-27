@@ -13,7 +13,37 @@ cd vader
 mix phx.server
 ```
 
-The emulator reaches the host at `http://10.0.2.2:8080`. A board on the LAN should use the computer's LAN address. Set that address in machine setup, and set `PUBLIC_BASE_URL` to the same address so the QR opens on a phone.
+The emulator reaches the host at `http://10.0.2.2:8080`. A board on the LAN should use the computer's LAN address. Set that address in machine setup.
+
+## Scan the QR from a phone
+
+Point the phone camera at the QR on the emulator or cabinet screen. The phone has to open the address inside that code. The default `PUBLIC_BASE_URL` is `http://127.0.0.1:8080`, which only this computer can reach.
+
+Put the phone and the computer on the same Wi-Fi. Get this machine's LAN address:
+
+```bash
+ipconfig getifaddr en0
+```
+
+In `vader/.env`, set `PUBLIC_BASE_URL` to that address and restart the server:
+
+```bash
+PUBLIC_BASE_URL=http://192.168.1.42:8080
+```
+
+```bash
+cd vader
+mix phx.server
+```
+
+The server listens on every interface. If the phone cannot open the page, allow incoming connections for Erlang in the macOS firewall.
+
+Start a sale and choose **Scan QR code**.
+
+- With no `PAYSTACK_SECRET_KEY`, the code opens `http://<lan-ip>:8080/pay/demo?reference=...`. Confirm on the phone. The kiosk sees that and continues.
+- With Paystack test keys, the code opens Paystack's checkout. The phone needs internet for that page. `PUBLIC_BASE_URL` is the address Paystack sends the phone back to after payment.
+
+Before you scan, open `http://<lan-ip>:8080` in the phone's browser. If that page loads, the QR will too.
 
 ## Build the cabinet app
 
