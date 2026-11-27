@@ -109,6 +109,7 @@ end
 config :vader,
   paystack_secret: System.get_env("PAYSTACK_SECRET_KEY"),
   public_base_url: System.get_env("PUBLIC_BASE_URL") || "http://127.0.0.1:8080",
+  cash_enabled: System.get_env("CASH_ENABLED") in ~w(1 true TRUE yes YES on ON),
   admin_email: System.get_env("ADMIN_EMAIL") || "operator@localhost",
   admin_password: System.get_env("ADMIN_PASSWORD") || "change-me"
 

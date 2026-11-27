@@ -10,7 +10,7 @@ class MachinePrefs(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_SETUP, value).apply()
 
     var machineNo: String
-        get() = prefs.getString(KEY_MACHINE, "VM-001").orEmpty()
+        get() = prefs.getString(KEY_MACHINE, "19265359").orEmpty()
         set(value) = prefs.edit().putString(KEY_MACHINE, value.trim()).apply()
 
     var serverBase: String

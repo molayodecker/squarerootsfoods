@@ -32,6 +32,6 @@ cd skywalker
 npm run dev
 ```
 
-Open http://127.0.0.1:3000. The seeded operator is `operator@localhost` / `change-me` unless `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set before the seed. Set `PAYSTACK_SECRET_KEY` for live charges. Without it, checkout stays in demo mode. Set `PUBLIC_BASE_URL` to the address a phone can open, the same way as the Python server.
+Open http://127.0.0.1:3000. The seeded operator is `operator@localhost` / `change-me` unless `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set before the seed. Set `PAYSTACK_SECRET_KEY` for live charges. Without it, checkout stays in demo mode. Set `PUBLIC_BASE_URL` to the address a phone can open, the same way as the Python server. `CASH_ENABLED=true` is the cash default until someone saves Settings on the desk. That saved choice wins and does not need a restart.
 
 `o.sinsivm.com` is the vendor console. This API does not log into it.

@@ -53,24 +53,13 @@ class MachineApi(private val prefs: MachinePrefs) {
         currency: String,
         lines: List<CartLine>,
     ): PaySession = withContext(Dispatchers.IO) {
-        val items = JSONArray()
-        lines.forEach { line ->
-            items.put(
-                JSONObject()
-                    .put("id", line.product.id)
-                    .put("name", line.product.name)
-                    .put("lane", line.product.lane)
-                    .put("qty", line.qty)
-                    .put("price_minor", line.product.priceMinor),
-            )
-        }
         val payload = JSONObject()
             .put("reference", reference)
             .put("email", email)
             .put("amount_minor", amountMinor)
             .put("currency", currency)
             .put("machine_no", prefs.machineNo)
-            .put("items", items)
+            .put("items", itemArray(lines))
         val body = post("/api/app/payments/paystack/initialize", payload)
         PaySession(
             reference = body.getString("reference"),
@@ -88,6 +77,51 @@ class MachineApi(private val prefs: MachinePrefs) {
             status = body.optString("status", "pending"),
             demo = body.optBoolean("demo"),
             message = body.optString("message"),
+        )
+    }
+
+    suspend fun cashEnabled(): Boolean = withContext(Dispatchers.IO) {
+        health().optBoolean("cash", false)
+    }
+
+    suspend fun climateFlags(): ClimateFlags = withContext(Dispatchers.IO) {
+        val body = health()
+        ClimateFlags(
+            temperature = body.optBoolean("temperature", false),
+            humidity = body.optBoolean("humidity", false),
+        )
+    }
+
+    suspend fun reportClimate(temperatureC: Float?, humidityPercent: Float?) = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("machine_no", prefs.machineNo)
+        if (temperatureC != null) payload.put("temperature_c", temperatureC.toDouble())
+        if (humidityPercent != null) payload.put("humidity_percent", humidityPercent.toDouble())
+        post("/api/app/v1/machine/climate", payload)
+    }
+
+    private fun health(): JSONObject = get("${prefs.serverBase}/health")
+
+    suspend fun takeCash(
+        reference: String,
+        amountMinor: Long,
+        currency: String,
+        lines: List<CartLine>,
+    ): PaySession = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("reference", reference)
+            .put("amount_minor", amountMinor)
+            .put("currency", currency)
+            .put("machine_no", prefs.machineNo)
+            .put("items", itemArray(lines))
+        val body = post("/api/app/payments/cash", payload)
+        PaySession(
+            reference = body.getString("reference"),
+            authorizationUrl = "",
+            amountMinor = body.getLong("amount_minor"),
+            currency = body.getString("currency"),
+            demo = false,
+            email = "cash@machine",
+            cash = true,
         )
     }
 
@@ -147,6 +181,21 @@ class MachineApi(private val prefs: MachinePrefs) {
             .put("progress", progress)
             .put("error", error)
         post("/api/app/v1/machine/appUpgradeResult", payload)
+    }
+
+    private fun itemArray(lines: List<CartLine>): JSONArray {
+        val items = JSONArray()
+        lines.forEach { line ->
+            items.put(
+                JSONObject()
+                    .put("id", line.product.id)
+                    .put("name", line.product.name)
+                    .put("lane", line.product.lane)
+                    .put("qty", line.qty)
+                    .put("price_minor", line.product.priceMinor),
+            )
+        }
+        return items
     }
 
     private fun get(url: String): JSONObject {

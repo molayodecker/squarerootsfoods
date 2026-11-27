@@ -22,7 +22,7 @@ cd kiosk
 ./gradlew :app:assembleDebug
 ```
 
-Install `app/build/outputs/apk/debug/app-debug.apk`. On first launch, set the machine number and server. Hold the green header to open operator settings. The first PIN is `258046`.
+Install `app/build/outputs/apk/debug/app-debug.apk`. On first launch the machine number is already `19265359` and the install grid is 6 rows by 6 coils. Set the server, then hold the green header to open operator settings. The first PIN is `258046`.
 
 Vend is simulated until you turn **Vend mode: serial port** and set a device such as `/dev/ttyS1`. The dispense frame is the Vendele command `03` (slot transfer) from the 3.1.80 driver: `57 58 00 66` + id + `03` + length + lane + checksum.
 

@@ -8,14 +8,17 @@ import com.squarerootsfoods.kiosk.data.MachineApi
 import com.squarerootsfoods.kiosk.data.MachinePrefs
 import com.squarerootsfoods.kiosk.data.PaySession
 import com.squarerootsfoods.kiosk.data.Product
+import com.squarerootsfoods.kiosk.data.formatMoney
 import com.squarerootsfoods.kiosk.InstallNote
 import com.squarerootsfoods.kiosk.InstallStore
 import com.squarerootsfoods.kiosk.update.UpdateInstaller
+import com.squarerootsfoods.kiosk.vend.CabinetClimate
 import com.squarerootsfoods.kiosk.vend.CabinetPorts
 import com.squarerootsfoods.kiosk.vend.LaneMap
 import com.squarerootsfoods.kiosk.vend.VendDriver
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -63,6 +66,32 @@ data class VendLineUi(
     val status: String = "Queued",
 )
 
+data class ClimateUi(
+    val temperatureOn: Boolean = false,
+    val humidityOn: Boolean = false,
+    val temperatureC: Float? = null,
+    val humidityPercent: Float? = null,
+    val readAtMillis: Long? = null,
+) {
+    fun temperatureText(): String? = when {
+        !temperatureOn -> null
+        temperatureC == null -> "No reading"
+        else -> String.format(java.util.Locale.US, "%.1f°C", temperatureC)
+    }
+
+    fun humidityText(): String? = when {
+        !humidityOn -> null
+        humidityPercent == null -> "No reading"
+        else -> "${humidityPercent.toInt()}%"
+    }
+
+    fun readingAge(): String {
+        val at = readAtMillis ?: return "No reading yet"
+        val seconds = ((System.currentTimeMillis() - at) / 1000).coerceAtLeast(0)
+        return "Last reading ${seconds}s ago"
+    }
+}
+
 data class VendUi(
     val lines: List<VendLineUi> = emptyList(),
     val running: Boolean = true,
@@ -74,6 +103,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     private val installStore = InstallStore(app)
     private val api = MachineApi(prefs)
     private val driver = VendDriver()
+    private val climateSensor = CabinetClimate(app)
     private var payJob: Job? = null
     private var installReturn = false
 
@@ -94,6 +124,12 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _pay = MutableStateFlow(PayUi())
     val pay: StateFlow<PayUi> = _pay
+
+    private val _cashEnabled = MutableStateFlow(false)
+    val cashEnabled: StateFlow<Boolean> = _cashEnabled
+
+    private val _climate = MutableStateFlow(ClimateUi())
+    val climate: StateFlow<ClimateUi> = _climate
 
     private val _vend = MutableStateFlow(VendUi())
     val vend: StateFlow<VendUi> = _vend
@@ -122,6 +158,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         if (prefs.setupComplete) reloadGoods()
+        watchClimate()
     }
 
     fun reloadGoods() {
@@ -129,8 +166,14 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 _products.value = api.getGoods()
                 _offline.value = false
+                _cashEnabled.value = try {
+                    api.cashEnabled()
+                } catch (_: Exception) {
+                    false
+                }
             } catch (error: Exception) {
                 _products.value = onboardCatalog()
+                _cashEnabled.value = false
                 _offline.value = true
                 _banner.value = error.message
             }
@@ -167,7 +210,15 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openCart() {
-        if (_cart.value.isNotEmpty()) _screen.value = Screen.Cart
+        if (_cart.value.isEmpty()) return
+        _screen.value = Screen.Cart
+        viewModelScope.launch {
+            _cashEnabled.value = try {
+                api.cashEnabled()
+            } catch (_: Exception) {
+                false
+            }
+        }
     }
 
     fun openDetail(productId: String) {
@@ -210,7 +261,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
         mqttUser: String,
         mqttPassword: String,
     ) {
-        prefs.machineNo = machineNo.ifBlank { "VM-001" }
+        prefs.machineNo = machineNo.ifBlank { "19265359" }
         prefs.serverBase = server.ifBlank { "http://10.0.2.2:8080" }
         prefs.currency = currency.ifBlank { "GHS" }
         if (pin.length >= 4) prefs.operatorPin = pin
@@ -279,6 +330,40 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         _pay.value = _pay.value.copy(waiting = false, error = "Payment timed out. If you were charged, ask the operator.")
+    }
+
+    fun startCash() {
+        if (_cart.value.isEmpty() || !_cashEnabled.value) return
+        payJob?.cancel()
+        _screen.value = Screen.Pay
+        _pay.value = PayUi(mode = "cash", waiting = false, error = null, failReason = "")
+    }
+
+    fun confirmCash() {
+        val lines = _cart.value
+        if (lines.isEmpty() || !_cashEnabled.value || _pay.value.waiting) return
+        val amount = lines.sumOf { it.totalMinor }
+        val reference = "${prefs.machineNo}-${System.currentTimeMillis()}"
+        _pay.value = _pay.value.copy(mode = "cash", waiting = true, error = null)
+        payJob?.cancel()
+        payJob = viewModelScope.launch {
+            try {
+                val session = api.takeCash(
+                    reference = reference,
+                    amountMinor = amount,
+                    currency = lines.first().product.currency.ifBlank { prefs.currency },
+                    lines = lines,
+                )
+                _pay.value = PayUi(session = session, mode = "cash", waiting = false)
+                dispense(session)
+            } catch (error: Exception) {
+                _pay.value = PayUi(
+                    mode = "cash",
+                    waiting = false,
+                    error = error.message ?: "Could not record the cash sale",
+                )
+            }
+        }
     }
 
     fun setPayMode(mode: String) {
@@ -375,11 +460,15 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
         val results = queued.toList()
         var refundNote: String? = null
         if (refundMinor > 0) {
-            refundNote = try {
-                val body = api.refund(session.reference, refundMinor, "Vend failed")
-                body.optString("message").ifBlank { "Refund of the failed items was sent to Paystack." }
-            } catch (error: Exception) {
-                "Vend failed and the refund call failed: ${error.message}"
+            refundNote = if (session.cash) {
+                "Return ${formatMoney(refundMinor, session.currency)} in cash. Nothing was sent to Paystack."
+            } else {
+                try {
+                    val body = api.refund(session.reference, refundMinor, "Vend failed")
+                    body.optString("message").ifBlank { "Refund of the failed items was sent to Paystack." }
+                } catch (error: Exception) {
+                    "Vend failed and the refund call failed: ${error.message}"
+                }
             }
         }
         _products.value = _products.value.map { product ->
@@ -683,7 +772,7 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
             }
             InstallUi(
                 rows = json.optInt("rows", 6),
-                coils = json.optInt("coils", 8),
+                coils = json.optInt("coils", 6),
                 board = json.optString("board", "vendele"),
                 serial = json.optString("serial", prefs.serialDevice),
                 baud = json.optInt("baud", prefs.baudRate),
@@ -702,6 +791,58 @@ class KioskViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearBanner() {
         _banner.value = null
+    }
+
+    private fun watchClimate() {
+        viewModelScope.launch {
+            while (isActive) {
+                val flags = try {
+                    api.climateFlags()
+                } catch (_: Exception) {
+                    null
+                }
+                if (flags == null) {
+                    delay(15_000)
+                    continue
+                }
+                if (!flags.temperature && !flags.humidity) {
+                    _climate.value = ClimateUi()
+                    if (_screen.value == Screen.TempPause) _screen.value = Screen.Attract
+                    delay(15_000)
+                    continue
+                }
+                val sample = climateSensor.read()
+                val temperature = if (flags.temperature) sample.temperatureC else null
+                val humidity = if (flags.humidity) sample.humidityPercent else null
+                val readAt = if (temperature != null || humidity != null) System.currentTimeMillis() else _climate.value.readAtMillis
+                _climate.value = ClimateUi(
+                    temperatureOn = flags.temperature,
+                    humidityOn = flags.humidity,
+                    temperatureC = temperature,
+                    humidityPercent = humidity,
+                    readAtMillis = readAt,
+                )
+                if (temperature != null || humidity != null) {
+                    try {
+                        api.reportClimate(temperature, humidity)
+                    } catch (_: Exception) {
+                    }
+                }
+                val hot = flags.temperature && temperature != null && temperature > 8f
+                when {
+                    hot && !keepsWorking(_screen.value) -> _screen.value = Screen.TempPause
+                    !hot && _screen.value == Screen.TempPause -> _screen.value = Screen.Attract
+                }
+                delay(15_000)
+            }
+        }
+    }
+
+    private fun keepsWorking(screen: Screen) = when (screen) {
+        Screen.Pay, Screen.Approve, Screen.PayFail, Screen.Vend, Screen.Done, Screen.Refund,
+        Screen.Pin, Screen.Service, Screen.Settings, Screen.Install, Screen.Setup,
+        -> true
+        else -> false
     }
 
     private fun onboardCatalog(): List<Product> {

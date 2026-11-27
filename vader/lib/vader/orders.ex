@@ -63,6 +63,65 @@ defmodule Vader.Orders do
     update_order(order, %{status: "success"})
   end
 
+  def take_cash(params) when is_map(params) do
+    reference = text(params["reference"])
+    amount = int(params["amount_minor"])
+    currency = params["currency"] || "GHS"
+    machine = Vader.Machines.get_by_no(params["machine_no"] || "")
+
+    cond do
+      reference == nil or amount <= 0 ->
+        {:error, 400, "reference and amount_minor are required"}
+
+      true ->
+        case get_by_reference(reference) ||
+               create_paid_cash(reference, amount, currency, machine, params["items"] || []) do
+          %Order{} = order ->
+            {:ok, %{reference: order.reference, amount_minor: order.amount_minor, currency: order.currency, status: order.status}}
+
+          {:ok, %Order{} = order} ->
+            {:ok, %{reference: order.reference, amount_minor: order.amount_minor, currency: order.currency, status: order.status}}
+
+          {:error, _changeset} ->
+            {:error, 422, "Could not record the cash sale"}
+        end
+    end
+  end
+
+  defp create_paid_cash(reference, amount, currency, machine, items) do
+    create_order(%{
+      machine_id: machine && machine.id,
+      reference: reference,
+      email: "cash@machine",
+      amount_minor: amount,
+      currency: currency,
+      status: "success",
+      demo: false,
+      items: if(is_list(items), do: Enum.filter(items, &is_map/1), else: [])
+    })
+  end
+
+  defp text(value) when is_binary(value) do
+    case String.trim(value) do
+      "" -> nil
+      other -> other
+    end
+  end
+
+  defp text(_), do: nil
+
+  defp int(value) when is_integer(value), do: value
+  defp int(value) when is_float(value), do: trunc(value)
+
+  defp int(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {number, _} -> number
+      :error -> 0
+    end
+  end
+
+  defp int(_), do: 0
+
   def json(%Order{} = order) do
     %{
       id: order.id,

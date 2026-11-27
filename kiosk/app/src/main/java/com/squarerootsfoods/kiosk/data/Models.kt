@@ -1,5 +1,10 @@
 package com.squarerootsfoods.kiosk.data
 
+data class ClimateFlags(
+    val temperature: Boolean,
+    val humidity: Boolean,
+)
+
 data class Product(
     val id: String,
     val name: String,
@@ -25,6 +30,7 @@ data class PaySession(
     val currency: String,
     val demo: Boolean,
     val email: String,
+    val cash: Boolean = false,
 )
 
 data class PayVerification(

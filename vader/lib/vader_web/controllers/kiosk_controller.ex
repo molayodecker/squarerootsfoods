@@ -1,10 +1,21 @@
 defmodule VaderWeb.KioskController do
   use VaderWeb, :controller
 
-  alias Vader.{Commissioning, Fleet, Machines, Orders, Paystack}
+  alias Vader.{Commissioning, Fleet, Machines, Orders, Paystack, Settings}
 
   def health(conn, _params) do
-    json(conn, %{ok: true, paystack: not Paystack.demo?()})
+    json(conn, %{
+      ok: true,
+      paystack: not Paystack.demo?(),
+      cash: Vader.cash_enabled?(),
+      temperature: Settings.temperature_enabled?(),
+      humidity: Settings.humidity_enabled?()
+    })
+  end
+
+  def climate(conn, params) do
+    Settings.record_climate(params)
+    json(conn, %{ok: true, data: Settings.status()})
   end
 
   def goods(conn, params) do
@@ -44,6 +55,17 @@ defmodule VaderWeb.KioskController do
   def webhook(conn, params) do
     Paystack.apply_webhook(params)
     json(conn, %{ok: true})
+  end
+
+  def cash(conn, params) do
+    if Vader.cash_enabled?() do
+      case Orders.take_cash(params) do
+        {:ok, body} -> json(conn, body)
+        {:error, status, message} -> error(conn, status, message)
+      end
+    else
+      error(conn, 404, "Cash is not enabled")
+    end
   end
 
   def deliver(conn, params) do

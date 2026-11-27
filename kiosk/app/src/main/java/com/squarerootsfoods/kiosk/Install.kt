@@ -12,7 +12,7 @@ data class CoilCheck(
 
 data class InstallUi(
     val rows: Int = 6,
-    val coils: Int = 10,
+    val coils: Int = 6,
     val board: String = "vendele",
     val serial: String = "",
     val baud: Int = 9600,

@@ -18,10 +18,12 @@ defmodule VaderWeb.Router do
     get "/payments/paystack/verify", KioskController, :verify
     post "/payments/paystack/refund", KioskController, :refund
     post "/payments/paystack/webhook", KioskController, :webhook
+    post "/payments/cash", KioskController, :cash
     post "/v1/order/updateOrderDeliver", KioskController, :deliver
     get "/v2/appLastedVersion", KioskController, :latest
     post "/v1/machine/appUpgradeResult", KioskController, :upgrade
     post "/v1/machine/commission", KioskController, :commission
+    post "/v1/machine/climate", KioskController, :climate
   end
 
   scope "/admin/api", VaderWeb.Admin do
@@ -47,6 +49,8 @@ defmodule VaderWeb.Router do
     get "/commission", CommissionController, :index
     get "/release", ReleaseController, :show
     put "/release", ReleaseController, :update
+    get "/settings", SettingsController, :show
+    put "/settings", SettingsController, :update
   end
 
   scope "/", VaderWeb do
