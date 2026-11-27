@@ -88,7 +88,18 @@ type Brand = {
   category: string;
   image_url: string;
 };
-type View = "overview" | "devices" | "goods" | "brands" | "orders" | "payments" | "install" | "release";
+type CashSetting = {
+  cash_enabled: boolean;
+  source: "desk" | "environment";
+  temperature_enabled: boolean;
+  temperature_source: "desk" | "default";
+  humidity_enabled: boolean;
+  humidity_source: "desk" | "default";
+  temperature_c: number | null;
+  humidity_percent: number | null;
+  climate_read_at: string | null;
+};
+type View = "overview" | "devices" | "goods" | "brands" | "orders" | "payments" | "settings" | "install" | "release";
 
 async function call<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = window.localStorage.getItem("machine_token");
@@ -139,6 +150,7 @@ export function Desk() {
           <NavButton current={view} id="brands" onClick={setView} label="Brands" />
           <NavButton current={view} id="orders" onClick={setView} label="Orders" />
           <NavButton current={view} id="payments" onClick={setView} label="Payments" />
+          <NavButton current={view} id="settings" onClick={setView} label="Settings" />
           <NavButton current={view} id="install" onClick={setView} label="Install" />
           <NavButton current={view} id="release" onClick={setView} label="App update" />
         </nav>
@@ -160,6 +172,7 @@ export function Desk() {
         {view === "brands" ? <BrandsPage onError={setError} /> : null}
         {view === "orders" ? <Orders onError={setError} /> : null}
         {view === "payments" ? <PaymentsPage onError={setError} /> : null}
+        {view === "settings" ? <SettingsPage onError={setError} /> : null}
         {view === "install" ? <InstallPage onError={setError} /> : null}
         {view === "release" ? <ReleaseForm onError={setError} /> : null}
       </main>
@@ -689,6 +702,111 @@ function PaymentsPage({ onError }: { onError: (message: string | null) => void }
         </p>
         <p className="mt-4 text-sm text-[#b8cfe8]">Return URL host: {payments.public_base_url}</p>
       </div>
+    </section>
+  );
+}
+
+function SettingsPage({ onError }: { onError: (message: string | null) => void }) {
+  const [setting, setSetting] = useState<CashSetting | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    call<{ data: CashSetting }>("/admin/api/settings")
+      .then((body) => setSetting(body.data))
+      .catch((reason) => onError(reason.message));
+  }, [onError]);
+
+  async function save(patch: Partial<Pick<CashSetting, "cash_enabled" | "temperature_enabled" | "humidity_enabled">>) {
+    setBusy(true);
+    onError(null);
+    try {
+      const body = await call<{ data: CashSetting }>("/admin/api/settings", {
+        method: "PUT",
+        body: JSON.stringify(patch),
+      });
+      setSetting(body.data);
+    } catch (reason) {
+      onError(reason instanceof Error ? reason.message : "Could not save the setting");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!setting) return <p>Loading settings…</p>;
+
+  const readAt = setting.climate_read_at ? new Date(setting.climate_read_at).toLocaleString() : "No reading yet";
+
+  return (
+    <section className="max-w-xl">
+      <h2 className="text-2xl font-medium">Settings</h2>
+      <div className="mt-4 rounded-xl bg-[#0b3d6e] p-5">
+        <p className="text-sm uppercase tracking-[0.14em] text-[#8fb3da]">Cash</p>
+        <p className="mt-2 text-2xl font-medium">{setting.cash_enabled ? "On" : "Off"}</p>
+        <p className="mt-3 text-[#dde8f4]">
+          {setting.cash_enabled
+            ? "The cabinet shows Pay with cash. The operator counts the notes and confirms. There is no bill reader."
+            : "The cabinet only offers mobile money. Pay with cash stays hidden."}
+        </p>
+        <p className="mt-4 text-sm text-[#b8cfe8]">
+          {setting.source === "desk"
+            ? "Saved on the desk. This wins over CASH_ENABLED."
+            : "Following CASH_ENABLED on the server. Saving here replaces that default."}
+        </p>
+        <button
+          className="mt-5 rounded-lg bg-[#ff6600] px-4 py-3 text-[#fff4e8] disabled:opacity-60"
+          type="button"
+          disabled={busy}
+          onClick={() => save({ cash_enabled: !setting.cash_enabled })}
+        >
+          {setting.cash_enabled ? "Turn cash off" : "Turn cash on"}
+        </button>
+      </div>
+      <div className="mt-4 rounded-xl bg-[#0b3d6e] p-5">
+        <p className="text-sm uppercase tracking-[0.14em] text-[#8fb3da]">Temperature</p>
+        <p className="mt-2 text-2xl font-medium">{setting.temperature_enabled ? "On" : "Off"}</p>
+        <p className="mt-3 text-[#dde8f4]">
+          {setting.temperature_enabled
+            ? "The cabinet reads its temperature sensor, shows it on screen, and pauses sales above 8°C."
+            : "The cabinet hides the temperature and keeps selling."}
+        </p>
+        <p className="mt-4 text-sm text-[#b8cfe8]">
+          {setting.temperature_c == null ? "No reading yet." : `${setting.temperature_c.toFixed(1)}°C at ${readAt}.`}
+        </p>
+        <button
+          className="mt-5 rounded-lg bg-[#ff6600] px-4 py-3 text-[#fff4e8] disabled:opacity-60"
+          type="button"
+          disabled={busy}
+          onClick={() => save({ temperature_enabled: !setting.temperature_enabled })}
+        >
+          {setting.temperature_enabled ? "Turn temperature off" : "Turn temperature on"}
+        </button>
+      </div>
+      <div className="mt-4 rounded-xl bg-[#0b3d6e] p-5">
+        <p className="text-sm uppercase tracking-[0.14em] text-[#8fb3da]">Humidity</p>
+        <p className="mt-2 text-2xl font-medium">{setting.humidity_enabled ? "On" : "Off"}</p>
+        <p className="mt-3 text-[#dde8f4]">
+          {setting.humidity_enabled
+            ? "The cabinet reads its humidity sensor and shows the percent next to the temperature."
+            : "The cabinet hides the humidity."}
+        </p>
+        <p className="mt-4 text-sm text-[#b8cfe8]">
+          {setting.humidity_percent == null ? "No reading yet." : `${Math.round(setting.humidity_percent)}% at ${readAt}.`}
+        </p>
+        <button
+          className="mt-5 rounded-lg bg-[#ff6600] px-4 py-3 text-[#fff4e8] disabled:opacity-60"
+          type="button"
+          disabled={busy}
+          onClick={() => save({ humidity_enabled: !setting.humidity_enabled })}
+        >
+          {setting.humidity_enabled ? "Turn humidity off" : "Turn humidity on"}
+        </button>
+      </div>
+      <ol className="mt-6 list-decimal space-y-2 pl-5 text-[#dde8f4]">
+        <li>Turn cash on here.</li>
+        <li>On the cabinet, open a basket. Pay with cash appears under mobile money.</li>
+        <li>Confirm the notes are in the machine. The spiral runs, and Orders lists the sale as cash@machine.</li>
+        <li>Turn temperature on to show the cabinet sensor and pause sales above 8°C. Turn humidity on to show the percent beside it.</li>
+      </ol>
     </section>
   );
 }

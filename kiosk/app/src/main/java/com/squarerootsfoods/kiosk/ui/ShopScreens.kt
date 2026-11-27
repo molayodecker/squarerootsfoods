@@ -3,6 +3,7 @@ package com.squarerootsfoods.kiosk.ui
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color as AndroidColor
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -46,6 +47,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,12 +75,14 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import com.squarerootsfoods.kiosk.ClimateUi
 import com.squarerootsfoods.kiosk.KioskViewModel
 import com.squarerootsfoods.kiosk.PayUi
 import com.squarerootsfoods.kiosk.R
@@ -88,6 +92,7 @@ import com.squarerootsfoods.kiosk.data.CartLine
 import com.squarerootsfoods.kiosk.data.Product
 import com.squarerootsfoods.kiosk.data.formatMoney
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -100,12 +105,12 @@ private fun TextUnit.tight() = (value * -0.02f).sp
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AttractScreen(model: KioskViewModel) {
+    val climate by model.climate.collectAsState()
     Column(Modifier.fillMaxSize().clickable { model.goHome() }) {
         Row(Modifier.fillMaxWidth().padding(start = 48.dp, end = 48.dp, top = 40.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painterResource(R.drawable.logo_reversed), "Square Roots Foods", Modifier.height(72.dp))
             Spacer(Modifier.weight(1f))
-            PhIcon(R.drawable.ic_thermometer_cold, Apricot, 18.dp)
-            Text("4.2°C", color = Apricot, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
+            ClimateReadout(climate)
         }
         val context = LocalContext.current
         val hero = remember {
@@ -181,6 +186,39 @@ fun AttractScreen(model: KioskViewModel) {
 }
 
 @Composable
+private fun CatalogHero() {
+    val context = LocalContext.current
+    val catalogSlides = remember(context) {
+        // Cabinet builds may include additional catalog artwork.
+        (1..12).mapNotNull { slide ->
+            val name = "hero_slide_" + slide.toString().padStart(2, '0')
+            context.resources.getIdentifier(name, "drawable", context.packageName).takeIf { it != 0 }
+        }.ifEmpty { listOf(R.drawable.hero_attract) }
+    }
+    var index by remember(catalogSlides) { mutableStateOf(0) }
+    LaunchedEffect(catalogSlides) {
+        if (catalogSlides.size == 1) return@LaunchedEffect
+        while (true) {
+            delay(4_000)
+            index = (index + 1) % catalogSlides.size
+        }
+    }
+    Crossfade(
+        targetState = index,
+        animationSpec = tween(durationMillis = 700),
+        label = "catalogHero",
+        modifier = Modifier.fillMaxWidth().height(230.dp).clip(Lg),
+    ) { slide ->
+        Image(
+            painterResource(catalogSlides[slide]),
+            "Cold drinks and snacks",
+            Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+    }
+}
+
+@Composable
 fun CatalogScreen(model: KioskViewModel, products: List<Product>, cart: List<CartLine>) {
     var filter by remember { mutableStateOf("All") }
     var keypad by remember { mutableStateOf(false) }
@@ -192,14 +230,9 @@ fun CatalogScreen(model: KioskViewModel, products: List<Product>, cart: List<Car
     val currency = cart.firstOrNull()?.product?.currency ?: products.firstOrNull()?.currency ?: model.currency
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            ShopBar(onLogo = { model.toAttract() }, onOperator = { model.requestPin() })
+            ShopBar(model, onLogo = { model.toAttract() }, onOperator = { model.requestPin() })
             Column(Modifier.padding(horizontal = 32.dp).padding(top = 8.dp)) {
-                Image(
-                    painterResource(R.drawable.hero_catalog),
-                    "Cold drinks",
-                    Modifier.fillMaxWidth().height(230.dp).clip(Lg),
-                    contentScale = ContentScale.Crop,
-                )
+                CatalogHero()
                 Row(Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("All", "Drinks", "Snacks").forEach { label ->
                         ChoiceChip(label, filter == label) { filter = label }
@@ -308,7 +341,7 @@ fun DetailScreen(model: KioskViewModel, product: Product?) {
     if (product == null) return
     var qty by remember(product.id) { mutableStateOf(1) }
     Column(Modifier.fillMaxSize()) {
-        ShopBar(onLogo = { model.toAttract() }, onOperator = { model.requestPin() })
+        ShopBar(model, onLogo = { model.toAttract() }, onOperator = { model.requestPin() })
         Column(Modifier.weight(1f).padding(horizontal = 32.dp).padding(top = 8.dp)) {
             GhostLink("All products") { model.goHome() }
             Box(Modifier.fillMaxWidth().height(540.dp).padding(top = 16.dp).clip(Lg).background(Blue900)) {
@@ -372,12 +405,13 @@ fun DetailScreen(model: KioskViewModel, product: Product?) {
 @Composable
 fun BasketScreen(model: KioskViewModel, cart: List<CartLine>) {
     val soldOut by model.soldOut.collectAsState()
+    val cashEnabled by model.cashEnabled.collectAsState()
     val count = cart.sumOf { it.qty }
     val total = cart.sumOf { it.totalMinor }
     val currency = cart.firstOrNull()?.product?.currency ?: model.currency
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            ShopBar(onLogo = { model.toAttract() }, onOperator = { model.requestPin() })
+            ShopBar(model, onLogo = { model.toAttract() }, onOperator = { model.requestPin() })
             Column(Modifier.weight(1f).padding(horizontal = 32.dp).padding(top = 8.dp)) {
                 GhostLink("Continue shopping") { model.goHome() }
                 Text("Your basket", color = Cream, fontSize = 44.sp, fontWeight = FontWeight.Medium, letterSpacing = 44.sp.tight(), modifier = Modifier.padding(top = 20.dp, bottom = 28.dp))
@@ -406,6 +440,9 @@ fun BasketScreen(model: KioskViewModel, cart: List<CartLine>) {
                     Text(formatMoney(total, currency), color = Cream, fontSize = 34.sp, fontWeight = FontWeight.Medium)
                 }
                 PrimaryButton("Pay with mobile money", onClick = { model.startPay("payments@example.com") }, enabled = cart.isNotEmpty(), modifier = Modifier.fillMaxWidth().height(64.dp), fontSize = 18.sp, trailing = R.drawable.ic_arrow_right)
+                if (cashEnabled) {
+                    SecondaryButton("Pay with cash", onClick = { model.startCash() }, modifier = Modifier.fillMaxWidth().height(64.dp), fontSize = 18.sp)
+                }
             }
         }
         soldOut?.let { SoldOutDialog(it, onDrinks = { model.dismissSoldOut(); model.goHome() }, onOk = { model.dismissSoldOut() }) }
@@ -415,16 +452,54 @@ fun BasketScreen(model: KioskViewModel, cart: List<CartLine>) {
 @Composable
 fun PayScreen(model: KioskViewModel, pay: PayUi, totalLabel: String) {
     Column(Modifier.fillMaxSize()) {
-        ShopBar(onLogo = { model.toAttract() }, onOperator = {})
+        ShopBar(model, onLogo = { model.toAttract() }, onOperator = {})
         Column(Modifier.weight(1f).padding(horizontal = 32.dp).padding(top = 8.dp)) {
             GhostLink("Back to basket") { model.cancelPay() }
             Text("Amount due", color = Blue300, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily, modifier = Modifier.padding(top = 20.dp))
             Text(totalLabel, color = Cream, fontSize = 56.sp, fontWeight = FontWeight.Medium, letterSpacing = 56.sp.tight(), modifier = Modifier.padding(bottom = 24.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 20.dp)) {
-                ChoiceChip("Scan QR code", pay.mode == "qr", tall = true, icon = R.drawable.ic_qr_code) { model.setPayMode("qr") }
-                ChoiceChip("Use phone number", pay.mode == "phone", tall = true, icon = R.drawable.ic_device_mobile) { model.setPayMode("phone") }
+            if (pay.mode != "cash") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 20.dp)) {
+                    ChoiceChip("Scan QR code", pay.mode == "qr", tall = true, icon = R.drawable.ic_qr_code) { model.setPayMode("qr") }
+                    ChoiceChip("Use phone number", pay.mode == "phone", tall = true, icon = R.drawable.ic_device_mobile) { model.setPayMode("phone") }
+                }
             }
-            if (pay.mode == "qr") {
+            if (pay.mode == "cash") {
+                var operatorEmail by remember { mutableStateOf("") }
+                var operatorPassword by remember { mutableStateOf("") }
+                Column(Modifier.weight(1f).fillMaxWidth().clip(Lg).background(Surface).border(1.dp, CardEdge, Lg).padding(28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Operator confirmation required", color = Cream, fontSize = 24.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily)
+                    Text("Hand the cash to an operator. The operator signs in after counting it.", color = Blue200, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily)
+                    pay.error?.let { Text(it, color = Pressed, fontSize = 15.sp) }
+                    OutlinedTextField(
+                        value = operatorEmail,
+                        onValueChange = { operatorEmail = it },
+                        label = { Text("Operator email") },
+                        singleLine = true,
+                        enabled = !pay.waiting,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = operatorPassword,
+                        onValueChange = { operatorPassword = it },
+                        label = { Text("Operator password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        enabled = !pay.waiting,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.weight(1f))
+                    PrimaryButton(
+                        "Confirm cash received",
+                        onClick = {
+                            model.confirmCash(operatorEmail.trim(), operatorPassword)
+                            operatorPassword = ""
+                        },
+                        enabled = !pay.waiting && operatorEmail.isNotBlank() && operatorPassword.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth().height(64.dp),
+                        fontSize = 18.sp,
+                    )
+                }
+            } else if (pay.mode == "qr") {
                 Column(Modifier.weight(1f).fillMaxWidth().clip(Lg).background(Surface).border(1.dp, CardEdge, Lg).padding(28.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(240.dp).clip(Md).background(Cream), contentAlignment = Alignment.Center) {
@@ -496,7 +571,7 @@ fun ApproveScreen(model: KioskViewModel, pay: PayUi, totalLabel: String) {
     val left = pay.expiresSec.coerceAtLeast(0)
     val label = "${left / 60}:${(left % 60).toString().padStart(2, '0')}"
     Column(Modifier.fillMaxSize()) {
-        ShopBar(onLogo = {}, onOperator = {})
+        ShopBar(model, onLogo = {}, onOperator = {})
         Column(Modifier.weight(1f).padding(horizontal = 32.dp).padding(top = 60.dp)) {
             Box(Modifier.size(72.dp).shadow(40.dp, Lg, ambientColor = ButtonGlow, spotColor = ButtonGlow).border(1.dp, Accent, Lg), contentAlignment = Alignment.Center) {
                 PhIcon(R.drawable.ic_device_mobile, Accent, 34.dp)
@@ -538,7 +613,7 @@ fun ApproveScreen(model: KioskViewModel, pay: PayUi, totalLabel: String) {
 @Composable
 fun PayFailScreen(model: KioskViewModel, pay: PayUi) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-        ShopBar(onLogo = {}, onOperator = {})
+        ShopBar(model, onLogo = {}, onOperator = {})
         Column(Modifier.weight(1f).padding(horizontal = 32.dp), verticalArrangement = Arrangement.Center) {
             Box(Modifier.size(72.dp).border(1.dp, Sky, CircleShape), contentAlignment = Alignment.Center) { PhIcon(R.drawable.ic_x, Blue200, 34.dp) }
             Text("Payment didn't go through", color = Cream, fontSize = 48.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily, letterSpacing = 48.sp.tight(), lineHeight = 54.sp, modifier = Modifier.padding(top = 32.dp))
@@ -555,7 +630,7 @@ fun PayFailScreen(model: KioskViewModel, pay: PayUi) {
 @Composable
 fun VendScreen(model: KioskViewModel, vend: VendUi) {
     Column(Modifier.fillMaxSize()) {
-        ShopBar(onLogo = {}, onOperator = {})
+        ShopBar(model, onLogo = {}, onOperator = {})
         Column(Modifier.weight(1f).padding(horizontal = 32.dp).padding(top = 60.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PhIcon(R.drawable.ic_check_circle, Apricot, 16.dp)
@@ -589,7 +664,7 @@ fun DoneScreen(model: KioskViewModel) {
     val seconds by model.doneSeconds.collectAsState()
     val count by model.deliveredCount.collectAsState()
     Column(Modifier.fillMaxSize()) {
-        ShopBar(onLogo = {}, onOperator = {})
+        ShopBar(model, onLogo = {}, onOperator = {})
         Column(Modifier.weight(1f).padding(horizontal = 32.dp), verticalArrangement = Arrangement.Center) {
             Box(Modifier.size(72.dp).shadow(40.dp, CircleShape, ambientColor = ButtonGlow, spotColor = ButtonGlow).border(1.dp, Accent, CircleShape), contentAlignment = Alignment.Center) {
                 PhIcon(R.drawable.ic_check, Accent, 34.dp)
@@ -613,7 +688,7 @@ fun RefundScreen(model: KioskViewModel, vend: VendUi, pay: PayUi) {
     val currency = model.currency
     val failed = vend.lines.count { !it.ok }
     Column(Modifier.fillMaxSize()) {
-        ShopBar(onLogo = {}, onOperator = {})
+        ShopBar(model, onLogo = {}, onOperator = {})
         Column(Modifier.weight(1f).padding(horizontal = 32.dp).padding(top = 60.dp).verticalScroll(rememberScrollState())) {
             Box(Modifier.size(72.dp).border(1.dp, Sky, CircleShape), contentAlignment = Alignment.Center) { PhIcon(R.drawable.ic_arrow_u_up_left, Blue200, 32.dp) }
             Text("$failed items couldn't be dispensed", color = Cream, fontSize = 46.sp, fontWeight = FontWeight.Medium, fontFamily = InterFamily, letterSpacing = 46.sp.tight(), lineHeight = 52.sp, modifier = Modifier.padding(top = 32.dp).width(600.dp))
@@ -677,6 +752,7 @@ fun ServicePinScreen(model: KioskViewModel) {
 
 @Composable
 fun ServiceScreen(model: KioskViewModel, products: List<Product>) {
+    val climate by model.climate.collectAsState()
     var selected by remember { mutableStateOf(products.firstOrNull()?.lane ?: 1) }
     val stock = products.associate { it.lane to it.stock }
     val names = products.associate { it.lane to it.name }
@@ -690,7 +766,13 @@ fun ServiceScreen(model: KioskViewModel, products: List<Product>) {
         }
         Text("${model.machineNo}  ·  App 3.2.0  ·  Dispenser: simulated", color = Sky, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp, bottom = 20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(bottom = 24.dp)) {
-            StatusCard("Cabinet", "4.2°C", "Limit 8°C", R.drawable.ic_thermometer_cold, Modifier.weight(1f))
+            StatusCard(
+                "Cabinet",
+                climate.temperatureText() ?: "Off",
+                climateDetail(climate),
+                R.drawable.ic_thermometer_cold,
+                Modifier.weight(1f),
+            )
             StatusCard("Door", "Closed", "Locked", R.drawable.ic_door, Modifier.weight(1f))
             StatusCard("Network", "Online", "Heartbeat 12 s ago", R.drawable.ic_wifi_high, Modifier.weight(1f))
             StatusCard("Sales", "Active", "Tap to pause", R.drawable.ic_storefront, Modifier.weight(1f))
@@ -729,12 +811,13 @@ fun ServiceScreen(model: KioskViewModel, products: List<Product>) {
 
 @Composable
 fun TempPauseScreen(model: KioskViewModel) {
+    val climate by model.climate.collectAsState()
     Column(Modifier.fillMaxSize().padding(horizontal = 48.dp, vertical = 40.dp)) {
         Image(painterResource(R.drawable.logo_reversed), "Square Roots Foods", Modifier.height(72.dp).alpha(0.55f))
         Spacer(Modifier.weight(1f))
         Row(verticalAlignment = Alignment.CenterVertically) {
             PhIcon(R.drawable.ic_thermometer_hot, Accent, 44.dp)
-            Text("9.6°C", color = Cream, fontSize = 96.sp, fontWeight = FontWeight.Medium, letterSpacing = 96.sp.tight(), modifier = Modifier.padding(start = 12.dp))
+            Text(climate.temperatureText() ?: "—", color = Cream, fontSize = 96.sp, fontWeight = FontWeight.Medium, letterSpacing = 96.sp.tight(), modifier = Modifier.padding(start = 12.dp))
             Text("limit 8°C", color = Sky, fontSize = 16.sp, modifier = Modifier.padding(start = 14.dp))
         }
         Text("Sales are paused", color = Cream, fontSize = 48.sp, fontWeight = FontWeight.Medium, letterSpacing = 48.sp.tight(), modifier = Modifier.padding(top = 36.dp))
@@ -742,7 +825,7 @@ fun TempPauseScreen(model: KioskViewModel) {
         Text("No payments are taken. The operator has been notified.", color = Sky, fontSize = 15.sp, modifier = Modifier.padding(top = 12.dp))
         Spacer(Modifier.weight(1f))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("${model.machineNo}  ·  Last reading 14 s ago", color = Blue600, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text("${model.machineNo}  ·  ${climate.readingAge()}", color = Blue600, fontSize = 14.sp, modifier = Modifier.weight(1f))
             Box(Modifier.size(44.dp).clickable { model.requestPin() }, contentAlignment = Alignment.Center) { PhIcon(R.drawable.ic_lock_simple, Blue600, 20.dp) }
         }
     }
@@ -750,7 +833,8 @@ fun TempPauseScreen(model: KioskViewModel) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ShopBar(onLogo: () -> Unit, onOperator: () -> Unit) {
+private fun ShopBar(model: KioskViewModel, onLogo: () -> Unit, onOperator: () -> Unit) {
+    val climate by model.climate.collectAsState()
     Row(
         Modifier.fillMaxWidth().combinedClickable(onClick = onLogo, onLongClick = onOperator).padding(horizontal = 32.dp, vertical = 22.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -771,18 +855,47 @@ private fun ShopBar(onLogo: () -> Unit, onOperator: () -> Unit) {
                 modifier = Modifier.padding(start = 6.dp),
             )
         }
-        Row(Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            PhIcon(R.drawable.ic_thermometer_cold, Apricot, 16.dp)
+        ClimateReadout(climate, compact = true)
+    }
+}
+
+@Composable
+private fun ClimateReadout(climate: ClimateUi, compact: Boolean = false) {
+    val temperature = climate.temperatureText()
+    val humidity = climate.humidityText()
+    if (temperature == null && humidity == null) return
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = if (compact) Modifier.padding(start = 16.dp) else Modifier) {
+        if (temperature != null) {
+            PhIcon(R.drawable.ic_thermometer_cold, Apricot, if (compact) 16.dp else 18.dp)
             Text(
-                "4.2°C chilled",
+                if (compact && climate.temperatureC != null) "$temperature chilled" else temperature,
                 color = Apricot,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                fontFamily = InterFamily,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                fontSize = if (compact) 13.sp else 15.sp,
+                fontWeight = if (compact) FontWeight.Medium else FontWeight.Normal,
+                fontFamily = if (compact) InterFamily else null,
+                style = if (compact) TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)) else TextStyle.Default,
                 modifier = Modifier.padding(start = 6.dp),
             )
         }
+        if (humidity != null) {
+            Text(
+                if (temperature != null) "  $humidity" else humidity,
+                color = Sky,
+                fontSize = if (compact) 13.sp else 15.sp,
+                fontWeight = if (compact) FontWeight.Medium else FontWeight.Normal,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+    }
+}
+
+private fun climateDetail(climate: ClimateUi): String {
+    val humidity = climate.humidityText()
+    return when {
+        !climate.humidityOn -> "Humidity off"
+        humidity == null -> "Humidity off"
+        humidity == "No reading" -> "Humidity has no reading"
+        else -> "$humidity humidity"
     }
 }
 

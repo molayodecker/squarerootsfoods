@@ -22,6 +22,12 @@ defmodule VaderWeb.Router do
     get "/v2/appLastedVersion", KioskController, :latest
     post "/v1/machine/appUpgradeResult", KioskController, :upgrade
     post "/v1/machine/commission", KioskController, :commission
+    post "/v1/machine/climate", KioskController, :climate
+  end
+
+  scope "/api/app", VaderWeb do
+    pipe_through :admin
+    post "/payments/cash", KioskController, :cash
   end
 
   scope "/admin/api", VaderWeb.Admin do
@@ -47,6 +53,8 @@ defmodule VaderWeb.Router do
     get "/commission", CommissionController, :index
     get "/release", ReleaseController, :show
     put "/release", ReleaseController, :update
+    get "/settings", SettingsController, :show
+    put "/settings", SettingsController, :update
   end
 
   scope "/", VaderWeb do

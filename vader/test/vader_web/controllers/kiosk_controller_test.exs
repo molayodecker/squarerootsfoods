@@ -1,5 +1,5 @@
 defmodule VaderWeb.KioskControllerTest do
-  use VaderWeb.ConnCase, async: true
+  use VaderWeb.ConnCase, async: false
 
   alias Vader.{Accounts, Machines, Orders}
 
@@ -19,6 +19,89 @@ defmodule VaderWeb.KioskControllerTest do
       })
 
     %{machine: machine}
+  end
+
+  test "cash stays closed until CASH_ENABLED is set", %{conn: conn, machine: machine} do
+    params = %{
+      "reference" => "VM-TEST-CASH",
+      "amount_minor" => 20_000,
+      "currency" => "NGN",
+      "machine_no" => machine.machine_no,
+      "items" => []
+    }
+
+    conn = post(sign_in(conn), "/api/app/payments/cash", params)
+    assert json_response(conn, 404)["message"] == "Cash is not enabled"
+
+    Application.put_env(:vader, :cash_enabled, true)
+    on_exit(fn -> Application.put_env(:vader, :cash_enabled, false) end)
+
+    assert json_response(post(build_conn(), "/api/app/payments/cash", params), 401)
+    assert Orders.get_by_reference("VM-TEST-CASH") == nil
+
+    conn = post(sign_in(build_conn()), "/api/app/payments/cash", params)
+    assert %{"status" => "success", "reference" => "VM-TEST-CASH", "amount_minor" => 20_000} = json_response(conn, 200)
+
+    assert Orders.get_by_reference("VM-TEST-CASH").payment_method == "cash"
+    assert [%{total_minor: 20_000}] = Orders.sales_totals()
+
+    refund = post(sign_in(build_conn()), "/admin/api/orders/VM-TEST-CASH/refund")
+    assert %{"data" => %{"status" => "refunded"}} = json_response(refund, 200)
+    assert Orders.sales_totals() == []
+
+    again = post(sign_in(build_conn()), "/admin/api/orders/VM-TEST-CASH/refund")
+    assert json_response(again, 409)
+  end
+
+  test "the database rejects a second cabinet settings row" do
+    alias Vader.Settings.Cabinet
+
+    assert Vader.Repo.aggregate(Cabinet, :count) == 1
+
+    duplicate =
+      Ecto.Changeset.change(%Cabinet{id: 2})
+      |> Ecto.Changeset.check_constraint(:id, name: :cabinet_settings_singleton)
+
+    assert {:error, changeset} = Vader.Repo.insert(duplicate, mode: :savepoint)
+    assert changeset.errors[:id]
+  end
+
+  test "the desk cash switch overrides the environment", %{conn: conn, machine: machine} do
+    Application.put_env(:vader, :cash_enabled, true)
+    on_exit(fn -> Application.put_env(:vader, :cash_enabled, false) end)
+
+    conn = get(sign_in(conn), "/admin/api/settings")
+    status = json_response(conn, 200)["data"]
+    assert status["source"] == "environment"
+    assert status["cash_enabled"] == true
+
+    conn = put(sign_in(build_conn()), "/admin/api/settings", %{cash_enabled: false})
+    assert %{"cash_enabled" => false, "source" => "desk"} = json_response(conn, 200)["data"]
+
+    closed =
+      post(sign_in(build_conn()), "/api/app/payments/cash", %{
+        "reference" => "VM-TEST-CASH-DESK-OFF",
+        "amount_minor" => 20_000,
+        "currency" => "NGN",
+        "machine_no" => machine.machine_no,
+        "items" => []
+      })
+
+    assert json_response(closed, 404)["message"] == "Cash is not enabled"
+
+    conn = put(sign_in(build_conn()), "/admin/api/settings", %{cash_enabled: true})
+    assert %{"cash_enabled" => true, "source" => "desk"} = json_response(conn, 200)["data"]
+
+    opened =
+      post(sign_in(build_conn()), "/api/app/payments/cash", %{
+        "reference" => "VM-TEST-CASH-DESK-ON",
+        "amount_minor" => 20_000,
+        "currency" => "NGN",
+        "machine_no" => machine.machine_no,
+        "items" => []
+      })
+
+    assert %{"status" => "success"} = json_response(opened, 200)
   end
 
   test "lists goods for a known machine", %{conn: conn} do
@@ -152,6 +235,43 @@ defmodule VaderWeb.KioskControllerTest do
 
     conn = post(sign_in(conn), "/admin/api/orders/VM-TEST-REFUND/refund")
     assert %{"data" => %{"status" => "refunded"}} = json_response(conn, 200)
+  end
+
+  test "the desk switches temperature and humidity for the cabinet", %{conn: conn} do
+    conn = get(sign_in(conn), "/admin/api/settings")
+    assert %{"temperature_enabled" => false, "humidity_enabled" => false} = json_response(conn, 200)["data"]
+
+    conn = put(sign_in(build_conn()), "/admin/api/settings", %{temperature_enabled: true, humidity_enabled: true})
+    assert %{"temperature_enabled" => true, "humidity_enabled" => true, "temperature_source" => "desk"} =
+             json_response(conn, 200)["data"]
+
+    health = get(build_conn(), "/health")
+    assert %{"temperature" => true, "humidity" => true} = json_response(health, 200)
+
+    posted =
+      post(build_conn(), "/api/app/v1/machine/climate", %{
+        "temperature_c" => 4.2,
+        "humidity_percent" => 55
+      })
+
+    assert %{"temperature_c" => 4.2, "humidity_percent" => 55.0} = json_response(posted, 200)["data"]
+
+    conn = put(sign_in(build_conn()), "/admin/api/settings", %{temperature_enabled: false})
+    turned_off = json_response(conn, 200)["data"]
+    assert turned_off["temperature_enabled"] == false
+    assert turned_off["temperature_c"] == nil
+    assert turned_off["humidity_enabled"] == true
+    assert turned_off["humidity_percent"] == 55.0
+
+    ignored =
+      post(build_conn(), "/api/app/v1/machine/climate", %{
+        "temperature_c" => 9.6,
+        "humidity_percent" => 40
+      })
+
+    stored = json_response(ignored, 200)["data"]
+    assert stored["temperature_c"] == nil
+    assert stored["humidity_percent"] == 40.0
   end
 
   defp sign_in(conn) do

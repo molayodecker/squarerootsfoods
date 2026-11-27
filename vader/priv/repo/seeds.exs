@@ -20,6 +20,14 @@ end
       {:ok, existing}
   end
 
+case Machines.get_by_no("19265359") do
+  nil ->
+    Machines.create_machine(%{machine_no: "19265359", name: "Cabinet", currency: "GHS"})
+
+  _existing ->
+    :ok
+end
+
 if Machines.list_goods(machine.id) == [] do
   [
     %{sku: "A1", name: "Still Water", price_minor: 20_000, lane: 1, stock: 8},
