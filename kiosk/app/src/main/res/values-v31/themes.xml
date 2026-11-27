@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Kiosk" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#002346</item>
+        <item name="android:statusBarColor">#002346</item>
+        <item name="android:navigationBarColor">#002346</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="android:windowSplashScreenBackground">#002346</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_blank</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#002346</item>
+    </style>
+</resources>

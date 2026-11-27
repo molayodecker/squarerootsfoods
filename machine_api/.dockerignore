@@ -1,0 +1,9 @@
+_build
+deps
+.git
+.env
+.env.*
+!.env.example
+test
+erl_crash.dump
+tmp

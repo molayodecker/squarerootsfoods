@@ -1,0 +1,602 @@
+[
+  {
+    "slug": "ades",
+    "name": "AdeS",
+    "category": "Drinks",
+    "image_url": "/brands/ades.png"
+  },
+  {
+    "slug": "alvalle",
+    "name": "Alvalle",
+    "category": "Snacks",
+    "image_url": "/brands/alvalle.jpg"
+  },
+  {
+    "slug": "appletiser",
+    "name": "Appletiser",
+    "category": "Drinks",
+    "image_url": "/brands/appletiser.png"
+  },
+  {
+    "slug": "aquafina",
+    "name": "Aquafina",
+    "category": "Drinks",
+    "image_url": "/brands/aquafina.png"
+  },
+  {
+    "slug": "aquarius",
+    "name": "Aquarius",
+    "category": "Drinks",
+    "image_url": "/brands/aquarius.png"
+  },
+  {
+    "slug": "ayataka",
+    "name": "Ayataka",
+    "category": "Drinks",
+    "image_url": "/brands/ayataka.png"
+  },
+  {
+    "slug": "baked",
+    "name": "Baked",
+    "category": "Snacks",
+    "image_url": "/brands/baked.jpg"
+  },
+  {
+    "slug": "baken-ets",
+    "name": "Baken-Ets",
+    "category": "Snacks",
+    "image_url": "/brands/baken-ets.jpg"
+  },
+  {
+    "slug": "bare",
+    "name": "Bare",
+    "category": "Snacks",
+    "image_url": "/brands/bare.jpg"
+  },
+  {
+    "slug": "barqs",
+    "name": "Barq's",
+    "category": "Drinks",
+    "image_url": "/brands/barqs.png"
+  },
+  {
+    "slug": "bodyarmor",
+    "name": "BODYARMOR",
+    "category": "Drinks",
+    "image_url": "/brands/bodyarmor.png"
+  },
+  {
+    "slug": "brisk",
+    "name": "Brisk",
+    "category": "Drinks",
+    "image_url": "/brands/brisk.png"
+  },
+  {
+    "slug": "bubly",
+    "name": "bubly",
+    "category": "Drinks",
+    "image_url": "/brands/bubly.png"
+  },
+  {
+    "slug": "captain-crunch",
+    "name": "Captain Crunch",
+    "category": "Snacks",
+    "image_url": "/brands/captain-crunch.jpg"
+  },
+  {
+    "slug": "cheetos",
+    "name": "Cheetos",
+    "category": "Snacks",
+    "image_url": "/brands/cheetos.jpg"
+  },
+  {
+    "slug": "chesters",
+    "name": "Chester's",
+    "category": "Snacks",
+    "image_url": "/brands/chesters.jpg"
+  },
+  {
+    "slug": "ciel",
+    "name": "Ciel",
+    "category": "Drinks",
+    "image_url": "/brands/ciel.png"
+  },
+  {
+    "slug": "coca-cola",
+    "name": "Coca-Cola",
+    "category": "Drinks",
+    "image_url": "/brands/coca-cola.png"
+  },
+  {
+    "slug": "coca-cola-zero",
+    "name": "Coca-Cola Zero",
+    "category": "Drinks",
+    "image_url": "/brands/coca-cola-zero.png"
+  },
+  {
+    "slug": "costa-coffee",
+    "name": "Costa Coffee",
+    "category": "Drinks",
+    "image_url": "/brands/costa-coffee.png"
+  },
+  {
+    "slug": "cracker-jack",
+    "name": "Cracker Jack",
+    "category": "Snacks",
+    "image_url": "/brands/cracker-jack.jpg"
+  },
+  {
+    "slug": "dasani",
+    "name": "Dasani",
+    "category": "Drinks",
+    "image_url": "/brands/dasani.png"
+  },
+  {
+    "slug": "del-valle",
+    "name": "Del Valle",
+    "category": "Drinks",
+    "image_url": "/brands/del-valle.png"
+  },
+  {
+    "slug": "dogadan",
+    "name": "Dogadan",
+    "category": "Drinks",
+    "image_url": "/brands/dogadan.png"
+  },
+  {
+    "slug": "doritos",
+    "name": "Doritos",
+    "category": "Snacks",
+    "image_url": "/brands/doritos.png"
+  },
+  {
+    "slug": "evolve",
+    "name": "Evolve",
+    "category": "Drinks",
+    "image_url": "/brands/evolve.jpg"
+  },
+  {
+    "slug": "fairlife",
+    "name": "fairlife",
+    "category": "Drinks",
+    "image_url": "/brands/fairlife.png"
+  },
+  {
+    "slug": "fanta",
+    "name": "Fanta",
+    "category": "Drinks",
+    "image_url": "/brands/fanta.png"
+  },
+  {
+    "slug": "fresca",
+    "name": "Fresca",
+    "category": "Drinks",
+    "image_url": "/brands/fresca.png"
+  },
+  {
+    "slug": "fresca-hard",
+    "name": "Fresca Hard",
+    "category": "Drinks",
+    "image_url": "/brands/fresca-hard.png"
+  },
+  {
+    "slug": "fresca-mixed",
+    "name": "Fresca Mixed",
+    "category": "Drinks",
+    "image_url": "/brands/fresca-mixed.png"
+  },
+  {
+    "slug": "fritos",
+    "name": "Fritos",
+    "category": "Snacks",
+    "image_url": "/brands/fritos.jpg"
+  },
+  {
+    "slug": "funyuns",
+    "name": "Funyuns",
+    "category": "Snacks",
+    "image_url": "/brands/funyuns.jpg"
+  },
+  {
+    "slug": "fuze-tea",
+    "name": "Fuze Tea",
+    "category": "Drinks",
+    "image_url": "/brands/fuze-tea.png"
+  },
+  {
+    "slug": "gamesa",
+    "name": "Gamesa",
+    "category": "Snacks",
+    "image_url": "/brands/gamesa.jpg"
+  },
+  {
+    "slug": "gatorade",
+    "name": "Gatorade",
+    "category": "Drinks",
+    "image_url": "/brands/gatorade.jpg"
+  },
+  {
+    "slug": "georgia",
+    "name": "Georgia",
+    "category": "Drinks",
+    "image_url": "/brands/georgia.png"
+  },
+  {
+    "slug": "gold-peak",
+    "name": "Gold Peak",
+    "category": "Drinks",
+    "image_url": "/brands/gold-peak.png"
+  },
+  {
+    "slug": "good-warrior",
+    "name": "Good Warrior",
+    "category": "Snacks",
+    "image_url": "/brands/good-warrior.jpg"
+  },
+  {
+    "slug": "grandmas",
+    "name": "Grandma's",
+    "category": "Snacks",
+    "image_url": "/brands/grandmas.jpg"
+  },
+  {
+    "slug": "i-lohas",
+    "name": "I LOHAS",
+    "category": "Drinks",
+    "image_url": "/brands/i-lohas.png"
+  },
+  {
+    "slug": "innocent",
+    "name": "innocent",
+    "category": "Drinks",
+    "image_url": "/brands/innocent.png"
+  },
+  {
+    "slug": "jack-daniels-coca-cola",
+    "name": "Jack Daniel's Coca-Cola",
+    "category": "Drinks",
+    "image_url": "/brands/jack-daniels-coca-cola.png"
+  },
+  {
+    "slug": "jack-links",
+    "name": "Jack Link's",
+    "category": "Snacks",
+    "image_url": "/brands/jack-links.jpg"
+  },
+  {
+    "slug": "lays",
+    "name": "Lay's",
+    "category": "Snacks",
+    "image_url": "/brands/lays.png"
+  },
+  {
+    "slug": "lemon-dou",
+    "name": "Lemon-Dou",
+    "category": "Drinks",
+    "image_url": "/brands/lemon-dou.png"
+  },
+  {
+    "slug": "lifewtr",
+    "name": "LIFEWTR",
+    "category": "Drinks",
+    "image_url": "/brands/lifewtr.jpg"
+  },
+  {
+    "slug": "lipton",
+    "name": "Lipton",
+    "category": "Drinks",
+    "image_url": "/brands/lipton.png"
+  },
+  {
+    "slug": "maaza",
+    "name": "Maaza",
+    "category": "Drinks",
+    "image_url": "/brands/maaza.png"
+  },
+  {
+    "slug": "minute-maid",
+    "name": "Minute Maid",
+    "category": "Drinks",
+    "image_url": "/brands/minute-maid.png"
+  },
+  {
+    "slug": "minute-maid-spiked",
+    "name": "Minute Maid Spiked",
+    "category": "Drinks",
+    "image_url": "/brands/minute-maid-spiked.png"
+  },
+  {
+    "slug": "miss-vickies",
+    "name": "Miss Vickie's",
+    "category": "Snacks",
+    "image_url": "/brands/miss-vickies.png"
+  },
+  {
+    "slug": "mountain-dew",
+    "name": "Mountain Dew",
+    "category": "Drinks",
+    "image_url": "/brands/mountain-dew.png"
+  },
+  {
+    "slug": "mug-root-beer",
+    "name": "Mug Root Beer",
+    "category": "Drinks",
+    "image_url": "/brands/mug-root-beer.png"
+  },
+  {
+    "slug": "munchies",
+    "name": "Munchies",
+    "category": "Snacks",
+    "image_url": "/brands/munchies.jpg"
+  },
+  {
+    "slug": "munchos",
+    "name": "Munchos",
+    "category": "Snacks",
+    "image_url": "/brands/munchos.png"
+  },
+  {
+    "slug": "muscle-milk",
+    "name": "Muscle Milk",
+    "category": "Drinks",
+    "image_url": "/brands/muscle-milk.png"
+  },
+  {
+    "slug": "natuchips",
+    "name": "NatuChips",
+    "category": "Snacks",
+    "image_url": "/brands/natuchips.jpg"
+  },
+  {
+    "slug": "near-east",
+    "name": "Near East",
+    "category": "Snacks",
+    "image_url": "/brands/near-east.jpg"
+  },
+  {
+    "slug": "ocean-spray",
+    "name": "Ocean Spray",
+    "category": "Drinks",
+    "image_url": "/brands/ocean-spray.jpg"
+  },
+  {
+    "slug": "pasta-roni",
+    "name": "Pasta Roni",
+    "category": "Snacks",
+    "image_url": "/brands/pasta-roni.jpg"
+  },
+  {
+    "slug": "peace-tea",
+    "name": "Peace Tea",
+    "category": "Drinks",
+    "image_url": "/brands/peace-tea.png"
+  },
+  {
+    "slug": "pearl-milling-company",
+    "name": "Pearl Milling Company",
+    "category": "Snacks",
+    "image_url": "/brands/pearl-milling-company.png"
+  },
+  {
+    "slug": "pepsi",
+    "name": "Pepsi",
+    "category": "Drinks",
+    "image_url": "/brands/pepsi.png"
+  },
+  {
+    "slug": "popcorners",
+    "name": "PopCorners",
+    "category": "Snacks",
+    "image_url": "/brands/popcorners.png"
+  },
+  {
+    "slug": "poppi",
+    "name": "poppi",
+    "category": "Drinks",
+    "image_url": "/brands/poppi.png"
+  },
+  {
+    "slug": "powerade",
+    "name": "POWERADE",
+    "category": "Drinks",
+    "image_url": "/brands/powerade.png"
+  },
+  {
+    "slug": "propel",
+    "name": "Propel",
+    "category": "Drinks",
+    "image_url": "/brands/propel.png"
+  },
+  {
+    "slug": "pure-leaf",
+    "name": "Pure Leaf",
+    "category": "Drinks",
+    "image_url": "/brands/pure-leaf.png"
+  },
+  {
+    "slug": "quaker",
+    "name": "Quaker",
+    "category": "Snacks",
+    "image_url": "/brands/quaker.jpg"
+  },
+  {
+    "slug": "red-rock-deli",
+    "name": "Red Rock Deli",
+    "category": "Snacks",
+    "image_url": "/brands/red-rock-deli.jpg"
+  },
+  {
+    "slug": "rockstar",
+    "name": "Rockstar",
+    "category": "Drinks",
+    "image_url": "/brands/rockstar.jpg"
+  },
+  {
+    "slug": "rold-gold",
+    "name": "Rold Gold",
+    "category": "Snacks",
+    "image_url": "/brands/rold-gold.jpg"
+  },
+  {
+    "slug": "ruffles",
+    "name": "Ruffles",
+    "category": "Snacks",
+    "image_url": "/brands/ruffles.png"
+  },
+  {
+    "slug": "sabra",
+    "name": "Sabra",
+    "category": "Snacks",
+    "image_url": "/brands/sabra.png"
+  },
+  {
+    "slug": "sabritas",
+    "name": "Sabritas",
+    "category": "Snacks",
+    "image_url": "/brands/sabritas.png"
+  },
+  {
+    "slug": "santitas",
+    "name": "Santitas",
+    "category": "Snacks",
+    "image_url": "/brands/santitas.jpg"
+  },
+  {
+    "slug": "schweppes",
+    "name": "Schweppes",
+    "category": "Drinks",
+    "image_url": "/brands/schweppes.png"
+  },
+  {
+    "slug": "siete",
+    "name": "Siete",
+    "category": "Snacks",
+    "image_url": "/brands/siete.png"
+  },
+  {
+    "slug": "simply",
+    "name": "Simply",
+    "category": "Snacks",
+    "image_url": "/brands/simply.png"
+  },
+  {
+    "slug": "simply-nkd",
+    "name": "Simply NKD",
+    "category": "Snacks",
+    "image_url": "/brands/simply-nkd.jpg"
+  },
+  {
+    "slug": "simply-orange",
+    "name": "Simply Orange",
+    "category": "Drinks",
+    "image_url": "/brands/simply-orange.png"
+  },
+  {
+    "slug": "simply-spiked",
+    "name": "Simply Spiked",
+    "category": "Drinks",
+    "image_url": "/brands/simply-spiked.png"
+  },
+  {
+    "slug": "smartfood",
+    "name": "Smartfood",
+    "category": "Snacks",
+    "image_url": "/brands/smartfood.png"
+  },
+  {
+    "slug": "smartwater",
+    "name": "smartwater",
+    "category": "Drinks",
+    "image_url": "/brands/smartwater.png"
+  },
+  {
+    "slug": "sobe",
+    "name": "Sobe",
+    "category": "Drinks",
+    "image_url": "/brands/sobe.jpg"
+  },
+  {
+    "slug": "sodastream",
+    "name": "SodaStream",
+    "category": "Drinks",
+    "image_url": "/brands/sodastream.png"
+  },
+  {
+    "slug": "spitz",
+    "name": "Spitz",
+    "category": "Snacks",
+    "image_url": "/brands/spitz.png"
+  },
+  {
+    "slug": "sprite",
+    "name": "Sprite",
+    "category": "Drinks",
+    "image_url": "/brands/sprite.png"
+  },
+  {
+    "slug": "stacys",
+    "name": "Stacy's",
+    "category": "Snacks",
+    "image_url": "/brands/stacys.png"
+  },
+  {
+    "slug": "starbucks",
+    "name": "Starbucks",
+    "category": "Drinks",
+    "image_url": "/brands/starbucks.png"
+  },
+  {
+    "slug": "starry",
+    "name": "Starry",
+    "category": "Drinks",
+    "image_url": "/brands/starry.jpg"
+  },
+  {
+    "slug": "sunchips",
+    "name": "Sunchips",
+    "category": "Snacks",
+    "image_url": "/brands/sunchips.png"
+  },
+  {
+    "slug": "tazo",
+    "name": "Tazo",
+    "category": "Drinks",
+    "image_url": "/brands/tazo.jpg"
+  },
+  {
+    "slug": "thums-up",
+    "name": "Thums Up",
+    "category": "Drinks",
+    "image_url": "/brands/thums-up.png"
+  },
+  {
+    "slug": "topo-chico",
+    "name": "Topo Chico",
+    "category": "Drinks",
+    "image_url": "/brands/topo-chico.png"
+  },
+  {
+    "slug": "topo-chico-hard",
+    "name": "Topo Chico Hard",
+    "category": "Drinks",
+    "image_url": "/brands/topo-chico-hard.png"
+  },
+  {
+    "slug": "tostitos",
+    "name": "Tostitos",
+    "category": "Snacks",
+    "image_url": "/brands/tostitos.png"
+  },
+  {
+    "slug": "vitaminwater",
+    "name": "vitaminwater",
+    "category": "Drinks",
+    "image_url": "/brands/vitaminwater.png"
+  },
+  {
+    "slug": "yachak",
+    "name": "Yachak",
+    "category": "Drinks",
+    "image_url": "/brands/yachak.jpg"
+  }
+]

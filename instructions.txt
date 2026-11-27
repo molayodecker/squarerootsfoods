@@ -1,0 +1,16 @@
+INSTALLATION INSTRUCTIONS
+
+On the cabinet, hold the header and enter the operator PIN 258046. Open Install tests. The first screen is the notes page.
+
+Write down four things before you trust a sale:
+
+The machine number from settings.
+Which serial port the screen lists as present. That is the cable to the motor board. On the emulator none of them exist, so this step only means something on the cabinet.
+The baud rate you selected. Start with the Vendele command. The old board hint, ttyS1 at 38400, is the fallback if Vendele does not move anything.
+Which physical spiral moves when you send lane 1. Lane 1 is the top-left slot: row 1, coil 1, then across the row and down. If a different spiral turns, stop and write down what moved. The numbering does not match the cabinet yet.
+Turn rehearsal off. Rehearsal keeps the motors off and only pretends a vend worked. Then tap Start the coil walk. For each slot, tap Send vend and watch the machine. Mark what you see, not what the screen hopes:
+
+Turned means that spiral rotated.
+Stuck means it tried and did not move.
+Empty means there is no product or no coil there.
+Test payment stays off until at least one slot is marked Turned. Pay on one of those, with the test Paystack keys now on the server. When that payment completes, tap Save this install to the desk. That report is what the desk keeps: the port, the baud, and every slot you marked. No install has been saved yet, so the desk still has no record from a real cabinet.
