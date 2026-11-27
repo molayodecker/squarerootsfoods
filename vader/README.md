@@ -6,7 +6,7 @@ The cabinet keeps calling the same paths (`/api/app/v1/goods/getGoodsList`, Pays
 
 ## Run
 
-Configuration comes from the environment. Copy `.env.example` to `.env` and fill in what this machine needs. Development falls back to the OS user, Postgres on localhost port 5432, and database `vader_dev` when those variables are unset. `PORT` defaults to 8080. The process logs to standard output and keeps no session data of its own.
+Configuration comes from the environment. Copy `.env.example` to `.env` and fill in what this machine needs. In development, `mix phx.server` reads that file and fills any variable the shell has not already set. Development falls back to the OS user, Postgres on localhost port 5432, and database `vader_dev` when those variables are unset. `PORT` defaults to 8080. The process logs to standard output and keeps no session data of its own.
 
 ```bash
 cd vader

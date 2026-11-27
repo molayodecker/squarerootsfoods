@@ -1,5 +1,55 @@
 import Config
 
+# Development reads vader/.env. A variable already set in the shell wins.
+# Production keeps using the process environment.
+if config_env() == :dev do
+  env_file = Path.expand("../.env", __DIR__)
+
+  if File.exists?(env_file) do
+    unwrap = fn value ->
+      value = String.trim(value)
+
+      cond do
+        String.starts_with?(value, "\"") and String.ends_with?(value, "\"") ->
+          String.slice(value, 1..-2//1)
+
+        String.starts_with?(value, "'") and String.ends_with?(value, "'") ->
+          String.slice(value, 1..-2//1)
+
+        true ->
+          value
+      end
+    end
+
+    env_file
+    |> File.read!()
+    |> String.split("\n")
+    |> Enum.each(fn line ->
+      line = String.trim(line)
+
+      cond do
+        line == "" or String.starts_with?(line, "#") ->
+          :ok
+
+        true ->
+          line = String.replace_prefix(line, "export ", "")
+
+          case String.split(line, "=", parts: 2) do
+            [key, value] ->
+              key = String.trim(key)
+
+              if key != "" and System.get_env(key) in [nil, ""] do
+                System.put_env(key, unwrap.(value))
+              end
+
+            _ ->
+              :ok
+          end
+      end
+    end)
+  end
+end
+
 database_config = fn default_database ->
   socket_options = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 

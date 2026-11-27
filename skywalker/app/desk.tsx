@@ -210,7 +210,13 @@ function Login({ onReady }: { onReady: () => void }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <img src="/logo-reversed.png" alt="Square Roots Foods" className="h-14 w-auto" />
+      <img
+        src="/logo-reversed.png"
+        alt="Square Roots Foods"
+        width={1024}
+        height={243}
+        className="h-auto max-h-14 w-auto max-w-full self-start"
+      />
       <h1 className="mt-6 text-3xl font-medium">Sign in</h1>
       <form className="mt-8 grid gap-4" onSubmit={submit}>
         <label className="grid gap-1 text-sm">
