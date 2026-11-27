@@ -6,10 +6,10 @@ The Paystack secret never goes on the device. The cabinet asks this server to op
 
 ## Run the server
 
-The cabinet talks to the Phoenix API in `../machine_api`, not a server inside this folder.
+The cabinet talks to the Phoenix API in `../vader`, not a server inside this folder.
 
 ```bash
-cd machine_api
+cd vader
 mix phx.server
 ```
 
@@ -32,7 +32,7 @@ Amount is in minor units (kobo for NGN). The server calls `transaction/initializ
 
 ## Remote updates
 
-The cabinet polls `machine_api` at `/api/app/v2/appLastedVersion`. A release is installed only when `version_code` is higher, `url` and `sha256` are set, and `required_version` is empty or equal to the version on the machine. The desk Release page writes that record.
+The cabinet polls `vader` at `/api/app/v2/appLastedVersion`. A release is installed only when `version_code` is higher, `url` and `sha256` are set, and `required_version` is empty or equal to the version on the machine. The desk Release page writes that record.
 
 ```bash
 shasum -a 256 app-release.apk
