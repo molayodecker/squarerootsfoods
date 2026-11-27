@@ -137,7 +137,13 @@ defmodule Vader.Paystack do
       {:ok, %{"data" => data} = body} ->
         status = normalize_status(data["status"])
         if status == "success", do: Orders.mark_paid(order)
-        {:ok, %{status: status, demo: false, reference: order.reference, message: body["message"] || ""}}
+
+        message =
+          if status == "failed",
+            do: data["gateway_response"] || body["message"] || "The payment was declined.",
+            else: ""
+
+        {:ok, %{status: status, demo: false, reference: order.reference, message: message}}
 
       {:error, message} ->
         {:ok, %{status: "pending", demo: false, reference: order.reference, message: message}}
@@ -193,7 +199,9 @@ defmodule Vader.Paystack do
 
   defp normalize_status("success"), do: "success"
   defp normalize_status("failed"), do: "failed"
-  defp normalize_status("abandoned"), do: "failed"
+  defp normalize_status("reversed"), do: "failed"
+  # An initialized checkout stays "abandoned" until the customer finishes paying.
+  defp normalize_status("abandoned"), do: "pending"
   defp normalize_status(_), do: "pending"
 
   defp demo_message(%{status: "success"}), do: "Demo payment"
