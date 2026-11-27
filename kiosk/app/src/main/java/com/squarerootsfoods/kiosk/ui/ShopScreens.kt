@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
@@ -106,11 +107,13 @@ fun AttractScreen(model: KioskViewModel) {
             PhIcon(R.drawable.ic_thermometer_cold, Apricot, 18.dp)
             Text("4.2°C", color = Apricot, fontSize = 15.sp, modifier = Modifier.padding(start = 6.dp))
         }
-        Image(
-            painterResource(R.drawable.hero_attract),
-            "Cold cabinet",
-            Modifier.fillMaxWidth().height(470.dp).padding(top = 36.dp),
-            contentScale = ContentScale.Crop,
+        val context = LocalContext.current
+        val hero = remember {
+            BitmapFactory.decodeResource(context.resources, R.drawable.hero_attract)?.asImageBitmap()
+        }
+        DewGlass(
+            bitmap = hero,
+            modifier = Modifier.fillMaxWidth().height(470.dp).padding(top = 36.dp),
         )
         Text(
             "Cold drinks and snacks.",
